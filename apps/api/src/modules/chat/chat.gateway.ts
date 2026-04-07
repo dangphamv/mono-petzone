@@ -4,8 +4,8 @@ import {
   SubscribeMessage,
   type OnGatewayConnection,
   type OnGatewayDisconnect,
-  type MessageBody,
-  type ConnectedSocket,
+  MessageBody,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';

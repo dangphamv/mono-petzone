@@ -1,7 +1,11 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
+import { searchProvidersSchema, type SearchProvidersInput } from '@petzone/validators';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodQueryValidationPipe } from '../../common/pipes/zod-query-validation.pipe';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { SearchService } from './search.service';
 import { SearchProvidersDto, AddFavoriteDto } from './dto';
 
@@ -15,9 +19,11 @@ export class SearchController {
   @ApiOperation({ summary: 'Search providers with filters' })
   @ApiResponse({ status: 200, description: 'Search results returned' })
   @ApiResponse({ status: 400, description: 'Invalid search parameters' })
-  searchProviders(@Query() query: SearchProvidersDto, @Req() req: any) {
-    const userId = req.user?.id;
-    return this.searchService.searchProviders(query, userId);
+  searchProviders(
+    @Query(new ZodQueryValidationPipe(searchProvidersSchema)) query: SearchProvidersInput,
+    @CurrentUser() user: AuthUser | undefined,
+  ) {
+    return this.searchService.searchProviders(query, user?.id);
   }
 
   @Post('favorites')
@@ -28,7 +34,7 @@ export class SearchController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Provider not found' })
   @ApiResponse({ status: 409, description: 'Provider already in favorites' })
-  addFavorite(@CurrentUser() user: any, @Body() body: AddFavoriteDto) {
+  addFavorite(@CurrentUser() user: AuthUser, @Body() body: AddFavoriteDto) {
     return this.searchService.addFavorite(user.id, body);
   }
 
@@ -38,7 +44,7 @@ export class SearchController {
   @ApiResponse({ status: 200, description: 'Provider removed from favorites' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Favorite not found' })
-  removeFavorite(@CurrentUser() user: any, @Param('providerId') providerId: string) {
+  removeFavorite(@CurrentUser() user: AuthUser, @Param('providerId') providerId: string) {
     return this.searchService.removeFavorite(user.id, providerId);
   }
 
@@ -47,8 +53,15 @@ export class SearchController {
   @ApiOperation({ summary: 'List favorite providers' })
   @ApiResponse({ status: 200, description: 'Favorites list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getFavorites(@CurrentUser() user: any) {
-    return this.searchService.getFavorites(user.id);
+  getFavorites(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.searchService.getFavorites(user.id, {
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Get('history')
@@ -56,7 +69,7 @@ export class SearchController {
   @ApiOperation({ summary: 'Get search history' })
   @ApiResponse({ status: 200, description: 'Search history returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getHistory(@CurrentUser() user: any) {
+  getHistory(@CurrentUser() user: AuthUser) {
     return this.searchService.getHistory(user.id);
   }
 }

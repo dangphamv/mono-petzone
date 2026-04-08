@@ -1,13 +1,20 @@
 import { z } from 'zod'
 
-export const sendMessageSchema = z.object({
+const messageRefine = (data: { type?: string; content?: string; image_url?: string }) =>
+  data.type === 'image' ? !!data.image_url : !!data.content
+
+const messageRefineMsg = 'Text messages require content, image messages require image_url'
+
+const sendMessageBase = z.object({
   conversation_id: z.string().uuid(),
   content: z.string().max(2000).optional(),
   type: z.enum(['text', 'image']).default('text'),
   image_url: z.string().url().optional(),
-}).refine(
-  (data) => data.type === 'image' ? !!data.image_url : !!data.content,
-  { message: 'Text messages require content, image messages require image_url' }
-)
+})
+
+export const sendMessageSchema = sendMessageBase.refine(messageRefine, { message: messageRefineMsg })
+
+export const sendMessageBodySchema = sendMessageBase.omit({ conversation_id: true }).refine(messageRefine, { message: messageRefineMsg })
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>
+export type SendMessageBodyInput = z.infer<typeof sendMessageBodySchema>

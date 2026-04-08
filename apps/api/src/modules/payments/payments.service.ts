@@ -5,18 +5,20 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { COMMISSION_RATE } from '@petzone/shared';
+import { PAYMENT_COLUMNS, ORDER_COLUMNS, PAYOUT_COLUMNS } from '../../common/constants/columns';
+import { paginate, type PaginationParams } from '../../common/utils/pagination';
 import { randomUUID } from 'crypto';
-
-const COMMISSION_RATE = 0.15;
+import type { CreatePaymentInput, RefundInput } from '@petzone/validators';
 
 @Injectable()
 export class PaymentsService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async create(userId: string, body: any) {
+  async create(userId: string, body: CreatePaymentInput) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
-      .select('*')
+      .select(ORDER_COLUMNS)
       .eq('id', body.order_id)
       .single();
     if (orderErr || !order) throw new NotFoundException('Order not found');
@@ -35,17 +37,17 @@ export class PaymentsService {
         status: 'pending',
         transaction_ref: transactionRef,
       })
-      .select()
+      .select(PAYMENT_COLUMNS)
       .single();
     if (payErr) throw new BadRequestException(payErr.message);
 
-    // Auto-complete payment (simulated — no real gateway)
+    // Auto-complete payment (simulated -- no real gateway)
     const now = new Date().toISOString();
     const { data: updatedPayment, error: upErr } = await this.supabase.client
       .from('payments')
       .update({ status: 'completed', paid_at: now })
       .eq('id', payment.id)
-      .select()
+      .select(PAYMENT_COLUMNS)
       .single();
     if (upErr) throw new BadRequestException(upErr.message);
 
@@ -85,18 +87,20 @@ export class PaymentsService {
   async findByOrder(userId: string, orderId: string) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
-      .select('*, providers(id, user_id)')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
       .eq('id', orderId)
       .single();
     if (orderErr || !order) throw new NotFoundException('Order not found');
 
     const isOwner = order.owner_id === userId;
-    const isProvider = order.providers?.user_id === userId;
+    const providers = (order as Record<string, unknown>).providers as { user_id: string }[] | { user_id: string } | null;
+    const providerUserId = Array.isArray(providers) ? providers[0]?.user_id : providers?.user_id;
+    const isProvider = providerUserId === userId;
     if (!isOwner && !isProvider) throw new ForbiddenException('No access to this order');
 
     const { data: payment, error } = await this.supabase.client
       .from('payments')
-      .select('*')
+      .select(PAYMENT_COLUMNS)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -106,17 +110,17 @@ export class PaymentsService {
     return payment;
   }
 
-  async refund(userId: string, orderId: string, body: any) {
+  async refund(userId: string, orderId: string, body: RefundInput) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
-      .select('*')
+      .select(ORDER_COLUMNS)
       .eq('id', orderId)
       .single();
     if (orderErr || !order) throw new NotFoundException('Order not found');
 
     const { data: payment, error: payErr } = await this.supabase.client
       .from('payments')
-      .select('*')
+      .select(PAYMENT_COLUMNS)
       .eq('order_id', orderId)
       .eq('status', 'completed')
       .order('created_at', { ascending: false })
@@ -176,7 +180,10 @@ export class PaymentsService {
     return refund;
   }
 
-  async getPayouts(userId: string) {
+  async getPayouts(userId: string, params: PaginationParams) {
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+
     const { data: provider, error: provErr } = await this.supabase.client
       .from('providers')
       .select('id')
@@ -184,13 +191,14 @@ export class PaymentsService {
       .single();
     if (provErr || !provider) throw new ForbiddenException('Not a provider');
 
-    const { data, error } = await this.supabase.client
+    const { data, error, count } = await this.supabase.client
       .from('provider_payouts')
-      .select('*')
+      .select(PAYOUT_COLUMNS, { count: 'exact' })
       .eq('provider_id', provider.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
-    return data;
+    return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
   async requestPayout(userId: string) {
@@ -201,23 +209,27 @@ export class PaymentsService {
       .single();
     if (provErr || !provider) throw new ForbiddenException('Not a provider');
 
-    const { data: allCompleted } = await this.supabase.client
-      .from('orders')
-      .select('id, total_price')
-      .eq('provider_id', provider.id)
-      .eq('status', 'completed');
+    const [completedResult, payoutsResult] = await Promise.all([
+      this.supabase.client
+        .from('orders')
+        .select('id, total_price')
+        .eq('provider_id', provider.id)
+        .eq('status', 'completed'),
+      this.supabase.client
+        .from('provider_payouts')
+        .select('order_id')
+        .eq('provider_id', provider.id),
+    ]);
 
-    const { data: existingPayouts } = await this.supabase.client
-      .from('provider_payouts')
-      .select('order_id')
-      .eq('provider_id', provider.id);
+    const allCompleted = completedResult.data;
+    const existingPayouts = payoutsResult.data;
 
-    const paidOrderIds = new Set((existingPayouts || []).map((p: any) => p.order_id));
-    const unpaidOrders = (allCompleted || []).filter((o: any) => !paidOrderIds.has(o.id));
+    const paidOrderIds = new Set((existingPayouts || []).map((p: { order_id: string }) => p.order_id));
+    const unpaidOrders = (allCompleted || []).filter((o: { id: string }) => !paidOrderIds.has(o.id));
 
     if (!unpaidOrders.length) throw new BadRequestException('No completed orders available for payout');
 
-    const payouts = unpaidOrders.map((order: any) => {
+    const payouts = unpaidOrders.map((order: { id: string; total_price: number }) => {
       const gross = Number(order.total_price);
       const commission = Math.round(gross * COMMISSION_RATE);
       return {
@@ -234,7 +246,7 @@ export class PaymentsService {
     const { data: created, error: insertErr } = await this.supabase.client
       .from('provider_payouts')
       .insert(payouts)
-      .select();
+      .select(PAYOUT_COLUMNS);
     if (insertErr) throw new BadRequestException(insertErr.message);
 
     return created;

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { UpdateProfileDto, NotificationPreferencesDto } from './dto';
+import { USER_COLUMNS } from '../../common/constants/columns';
+import type { UpdateProfileInput, NotificationPreferencesInput } from '@petzone/validators';
 
 @Injectable()
 export class UsersService {
@@ -9,7 +10,7 @@ export class UsersService {
   async getMe(userId: string) {
     const { data, error } = await this.supabase.client
       .from('users')
-      .select('*')
+      .select(USER_COLUMNS)
       .eq('id', userId)
       .single();
 
@@ -17,12 +18,12 @@ export class UsersService {
     return data;
   }
 
-  async updateMe(userId: string, body: UpdateProfileDto) {
+  async updateMe(userId: string, body: UpdateProfileInput) {
     const { data, error } = await this.supabase.client
       .from('users')
       .update({ ...body, updated_at: new Date().toISOString() })
       .eq('id', userId)
-      .select()
+      .select(USER_COLUMNS)
       .single();
 
     if (error) throw new BadRequestException(error.message);
@@ -40,7 +41,7 @@ export class UsersService {
     return data;
   }
 
-  async updateNotificationPreferences(userId: string, body: NotificationPreferencesDto) {
+  async updateNotificationPreferences(userId: string, body: NotificationPreferencesInput) {
     const { data: current, error: fetchError } = await this.supabase.client
       .from('users')
       .select('notification_preferences')
@@ -58,7 +59,7 @@ export class UsersService {
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
-      .select()
+      .select(USER_COLUMNS)
       .single();
 
     if (error) throw new BadRequestException(error.message);

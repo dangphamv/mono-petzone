@@ -1,7 +1,17 @@
-import { Controller, Get, Patch, Put, Param, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Put, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
+import {
+  verifyProviderSchema, type VerifyProviderInput,
+  resolveDisputeSchema, type ResolveDisputeInput,
+  suspendUserSchema, type SuspendUserInput,
+  moderateReviewSchema, type ModerateReviewInput,
+  updateConfigSchema, type UpdateConfigInput,
+} from '@petzone/validators';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AdminService } from './admin.service';
 import { VerifyProviderDto, ResolveDisputeDto, SuspendUserDto, ModerateReviewDto, UpdateConfigDto } from './dto';
 
@@ -17,7 +27,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Dashboard data returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getDashboard(@CurrentUser() user: any) {
+  getDashboard(@CurrentUser() user: AuthUser) {
     return this.adminService.getDashboard(user.id);
   }
 
@@ -26,8 +36,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Providers list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getProviders() {
-    return this.adminService.getProviders();
+  getProviders(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.adminService.getProviders({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Patch('providers/:id/verify')
@@ -37,7 +50,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Provider not found' })
-  verifyProvider(@CurrentUser() user: any, @Param('id') id: string, @Body() body: VerifyProviderDto) {
+  verifyProvider(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(verifyProviderSchema)) body: VerifyProviderInput) {
     return this.adminService.verifyProvider(user.id, id, body);
   }
 
@@ -46,8 +59,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Orders list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getOrders() {
-    return this.adminService.getOrders();
+  getOrders(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.adminService.getOrders({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Get('disputes')
@@ -55,8 +71,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Disputes list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getDisputes() {
-    return this.adminService.getDisputes();
+  getDisputes(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.adminService.getDisputes({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Patch('disputes/:id/resolve')
@@ -66,7 +85,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Dispute not found' })
-  resolveDispute(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ResolveDisputeDto) {
+  resolveDispute(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(resolveDisputeSchema)) body: ResolveDisputeInput) {
     return this.adminService.resolveDispute(user.id, id, body);
   }
 
@@ -75,8 +94,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Users list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getUsers() {
-    return this.adminService.getUsers();
+  getUsers(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.adminService.getUsers({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Patch('users/:id/suspend')
@@ -86,7 +108,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  suspendUser(@CurrentUser() user: any, @Param('id') id: string, @Body() body: SuspendUserDto) {
+  suspendUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(suspendUserSchema)) body: SuspendUserInput) {
     return this.adminService.suspendUser(user.id, id, body);
   }
 
@@ -95,8 +117,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Flagged reviews returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getFlaggedReviews() {
-    return this.adminService.getFlaggedReviews();
+  getFlaggedReviews(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.adminService.getFlaggedReviews({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Patch('reviews/:id/moderate')
@@ -106,7 +131,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Review not found' })
-  moderateReview(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ModerateReviewDto) {
+  moderateReview(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(moderateReviewSchema)) body: ModerateReviewInput) {
     return this.adminService.moderateReview(user.id, id, body);
   }
 
@@ -134,7 +159,7 @@ export class AdminController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  updateConfig(@CurrentUser() user: any, @Body() body: UpdateConfigDto) {
+  updateConfig(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateConfigSchema)) body: UpdateConfigInput) {
     return this.adminService.updateConfig(user.id, body);
   }
 }

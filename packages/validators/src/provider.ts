@@ -50,5 +50,7 @@ export const updateAvailabilitySchema = z.object({
 export type RegisterProviderInput = z.infer<typeof registerProviderSchema>
 export type UpdateListingInput = z.infer<typeof updateListingSchema>
 export type CreateRoomInput = z.infer<typeof createRoomSchema>
+export type UpdateRoomInput = z.infer<typeof updateRoomSchema>
 export type CreateAddOnInput = z.infer<typeof createAddOnSchema>
+export type UpdateAddOnInput = z.infer<typeof updateAddOnSchema>
 export type UpdateAvailabilityInput = z.infer<typeof updateAvailabilitySchema>

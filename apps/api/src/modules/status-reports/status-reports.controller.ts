@@ -1,6 +1,10 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { createStatusReportSchema } from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
+import type { CreateStatusReportInput } from '@petzone/validators';
 import { StatusReportsService } from './status-reports.service';
 import { CreateStatusReportDto } from './dto';
 
@@ -18,9 +22,9 @@ export class StatusReportsController {
   @ApiResponse({ status: 403, description: 'Only the provider can create status reports' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   create(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
-    @Body() body: CreateStatusReportDto,
+    @Body(new ZodValidationPipe(createStatusReportSchema)) body: CreateStatusReportInput,
   ) {
     return this.statusReportsService.create(user.id, orderId, body);
   }
@@ -30,7 +34,7 @@ export class StatusReportsController {
   @ApiResponse({ status: 200, description: 'Status reports returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  findAll(@CurrentUser() user: any, @Param('orderId') orderId: string) {
+  findAll(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.statusReportsService.findAll(user.id, orderId);
   }
 
@@ -40,7 +44,7 @@ export class StatusReportsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Report not found' })
   findOne(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
     @Param('reportId') reportId: string,
   ) {

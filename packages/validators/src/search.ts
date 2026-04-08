@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
 export const searchProvidersSchema = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
   radius_km: z.number().positive().max(50).default(10),
   check_in_date: z.string().optional(),
   check_out_date: z.string().optional(),

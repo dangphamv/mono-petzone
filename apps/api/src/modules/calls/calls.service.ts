@@ -5,15 +5,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CHAT_CONVERSATION_COLUMNS, CALL_LOG_COLUMNS } from '../../common/constants/columns';
+import type { InitiateCallInput } from '@petzone/validators';
 
 @Injectable()
 export class CallsService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async initiate(userId: string, conversationId: string, body: any) {
+  async initiate(userId: string, conversationId: string, body: InitiateCallInput) {
     const { data: conversation, error: convErr } = await this.supabase.client
       .from('chat_conversations')
-      .select('*')
+      .select(CHAT_CONVERSATION_COLUMNS)
       .eq('id', conversationId)
       .single();
     if (convErr || !conversation) throw new NotFoundException('Conversation not found');
@@ -43,7 +45,7 @@ export class CallsService {
   async getLog(userId: string, conversationId: string) {
     const { data: conversation, error: convErr } = await this.supabase.client
       .from('chat_conversations')
-      .select('*')
+      .select(CHAT_CONVERSATION_COLUMNS)
       .eq('id', conversationId)
       .single();
     if (convErr || !conversation) throw new NotFoundException('Conversation not found');
@@ -52,7 +54,7 @@ export class CallsService {
 
     const { data, error } = await this.supabase.client
       .from('call_logs')
-      .select('*')
+      .select(CALL_LOG_COLUMNS)
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);

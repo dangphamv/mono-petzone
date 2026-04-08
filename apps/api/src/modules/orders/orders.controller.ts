@@ -1,6 +1,19 @@
-import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import {
+  createOrderSchema,
+  updateOrderStatusSchema,
+  cancelOrderSchema,
+} from '@petzone/validators';
+import type {
+  CreateOrderInput,
+  UpdateOrderStatusInput,
+  CancelOrderInput,
+} from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, CancelOrderDto, UpdateOrderStatusDto } from './dto';
 
@@ -16,7 +29,7 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Validation error or unavailable dates' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Provider or room not found' })
-  create(@CurrentUser() user: any, @Body() body: CreateOrderDto) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createOrderSchema)) body: CreateOrderInput) {
     return this.ordersService.create(user.id, body);
   }
 
@@ -24,8 +37,15 @@ export class OrdersController {
   @ApiOperation({ summary: 'List orders for current user' })
   @ApiResponse({ status: 200, description: 'Orders list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll(@CurrentUser() user: any) {
-    return this.ordersService.findAll(user.id);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.ordersService.findAll(user.id, {
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Get(':id')
@@ -33,7 +53,7 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'Order details returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  findOne(@CurrentUser() user: any, @Param('id') id: string) {
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.findOne(user.id, id);
   }
 
@@ -44,7 +64,7 @@ export class OrdersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not allowed to update this order' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  updateStatus(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateOrderStatusDto) {
+  updateStatus(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updateOrderStatusSchema)) body: UpdateOrderStatusInput) {
     return this.ordersService.updateStatus(user.id, id, body);
   }
 
@@ -54,7 +74,7 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Order cannot be cancelled in current status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  cancel(@CurrentUser() user: any, @Param('id') id: string, @Body() body: CancelOrderDto) {
+  cancel(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(cancelOrderSchema)) body: CancelOrderInput) {
     return this.ordersService.cancel(user.id, id, body);
   }
 
@@ -63,7 +83,7 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'Order history returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  getHistory(@CurrentUser() user: any, @Param('id') id: string) {
+  getHistory(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.getHistory(user.id, id);
   }
 }

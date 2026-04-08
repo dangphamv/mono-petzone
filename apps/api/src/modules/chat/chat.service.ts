@@ -5,37 +5,47 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CHAT_CONVERSATION_COLUMNS, CHAT_MESSAGE_COLUMNS } from '../../common/constants/columns';
+import { paginate, type PaginationParams } from '../../common/utils/pagination';
+import type { SendMessageInput } from '@petzone/validators';
 
 @Injectable()
 export class ChatService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getConversations(userId: string) {
-    const { data, error } = await this.supabase.client
+  async getConversations(userId: string, params: PaginationParams) {
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+
+    const { data, error, count } = await this.supabase.client
       .from('chat_conversations')
-      .select('*')
+      .select(CHAT_CONVERSATION_COLUMNS, { count: 'exact' })
       .or(`owner_id.eq.${userId},provider_id.eq.${userId}`)
-      .order('last_message_at', { ascending: false });
+      .order('last_message_at', { ascending: false })
+      .range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
-    return data;
+    return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
-  async getMessages(userId: string, conversationId: string) {
+  async getMessages(userId: string, conversationId: string, params: PaginationParams) {
     await this.verifyParticipant(userId, conversationId);
 
-    const { data, error } = await this.supabase.client
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+
+    const { data, error, count } = await this.supabase.client
       .from('chat_messages')
-      .select('*')
+      .select(CHAT_MESSAGE_COLUMNS, { count: 'exact' })
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
-      .limit(100);
+      .range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
-    return data;
+    return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
-  async sendMessage(userId: string, conversationId: string, body: any) {
+  async sendMessage(userId: string, conversationId: string, body: Omit<SendMessageInput, 'conversation_id'>) {
     const conversation = await this.verifyParticipant(userId, conversationId);
 
     const { data: message, error } = await this.supabase.client
@@ -96,7 +106,7 @@ export class ChatService {
   private async verifyParticipant(userId: string, conversationId: string) {
     const { data, error } = await this.supabase.client
       .from('chat_conversations')
-      .select('*')
+      .select(CHAT_CONVERSATION_COLUMNS)
       .eq('id', conversationId)
       .single();
     if (error || !data) throw new NotFoundException('Conversation not found');

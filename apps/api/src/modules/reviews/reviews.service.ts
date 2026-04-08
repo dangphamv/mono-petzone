@@ -5,13 +5,16 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
+import type { CreateReviewInput, RespondReviewInput } from '@petzone/validators';
 import { SupabaseService } from '../supabase/supabase.service';
+import { REVIEW_COLUMNS } from '../../common/constants/columns';
+import { paginate, type PaginationParams } from '../../common/utils/pagination';
 
 @Injectable()
 export class ReviewsService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async create(userId: string, body: any) {
+  async create(userId: string, body: CreateReviewInput) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
       .select('id, owner_id, provider_id, status, completed_at')
@@ -49,29 +52,33 @@ export class ReviewsService {
         text: body.text ?? null,
         photos: body.photos || [],
       })
-      .select()
+      .select(REVIEW_COLUMNS)
       .single();
     if (error) throw new BadRequestException(error.message);
 
     return data;
   }
 
-  async findByProvider(providerId: string) {
-    const { data, error } = await this.supabase.client
+  async findByProvider(providerId: string, params: PaginationParams) {
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+
+    const { data, error, count } = await this.supabase.client
       .from('reviews')
-      .select('*')
+      .select(REVIEW_COLUMNS, { count: 'exact' })
       .eq('provider_id', providerId)
       .eq('is_visible', true)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
-    return data;
+    return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
-  async respond(userId: string, id: string, body: any) {
+  async respond(userId: string, id: string, body: RespondReviewInput) {
     const { data: review, error: reviewErr } = await this.supabase.client
       .from('reviews')
-      .select('*')
+      .select(REVIEW_COLUMNS)
       .eq('id', id)
       .single();
     if (reviewErr || !review) throw new NotFoundException('Review not found');
@@ -93,7 +100,7 @@ export class ReviewsService {
         provider_responded_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select()
+      .select(REVIEW_COLUMNS)
       .single();
     if (error) throw new BadRequestException(error.message);
 
@@ -103,7 +110,7 @@ export class ReviewsService {
   async findOne(id: string) {
     const { data, error } = await this.supabase.client
       .from('reviews')
-      .select('*')
+      .select(REVIEW_COLUMNS)
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException('Review not found');

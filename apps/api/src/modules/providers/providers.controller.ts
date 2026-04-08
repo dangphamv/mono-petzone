@@ -2,6 +2,26 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, Put } from '@nestjs/
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import {
+  registerProviderSchema,
+  updateListingSchema,
+  createRoomSchema,
+  updateRoomSchema,
+  createAddOnSchema,
+  updateAddOnSchema,
+  updateAvailabilitySchema,
+} from '@petzone/validators';
+import type {
+  RegisterProviderInput,
+  UpdateListingInput,
+  CreateRoomInput,
+  UpdateRoomInput,
+  CreateAddOnInput,
+  UpdateAddOnInput,
+  UpdateAvailabilityInput,
+} from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ProvidersService } from './providers.service';
 import { RegisterProviderDto, UpdateListingDto, CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto, UpdateAvailabilityDto } from './dto';
 
@@ -17,7 +37,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'User already registered as provider' })
-  register(@CurrentUser() user: any, @Body() body: RegisterProviderDto) {
+  register(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerProviderSchema)) body: RegisterProviderInput) {
     return this.providersService.register(user.id, body);
   }
 
@@ -37,7 +57,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  updateMe(@CurrentUser() user: any, @Body() body: UpdateListingDto) {
+  updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateListingSchema)) body: UpdateListingInput) {
     return this.providersService.updateMe(user.id, body);
   }
 
@@ -47,7 +67,7 @@ export class ProvidersController {
   @ApiResponse({ status: 200, description: 'Rooms returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  getRooms(@CurrentUser() user: any) {
+  getRooms(@CurrentUser() user: AuthUser) {
     return this.providersService.getRooms(user.id);
   }
 
@@ -58,7 +78,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  createRoom(@CurrentUser() user: any, @Body() body: CreateRoomDto) {
+  createRoom(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createRoomSchema)) body: CreateRoomInput) {
     return this.providersService.createRoom(user.id, body);
   }
 
@@ -70,7 +90,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  updateRoom(@CurrentUser() user: any, @Param('roomId') roomId: string, @Body() body: UpdateRoomDto) {
+  updateRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string, @Body(new ZodValidationPipe(updateRoomSchema)) body: UpdateRoomInput) {
     return this.providersService.updateRoom(user.id, roomId, body);
   }
 
@@ -81,7 +101,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  deleteRoom(@CurrentUser() user: any, @Param('roomId') roomId: string) {
+  deleteRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string) {
     return this.providersService.deleteRoom(user.id, roomId);
   }
 
@@ -91,7 +111,7 @@ export class ProvidersController {
   @ApiResponse({ status: 200, description: 'Add-ons returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  getAddOns(@CurrentUser() user: any) {
+  getAddOns(@CurrentUser() user: AuthUser) {
     return this.providersService.getAddOns(user.id);
   }
 
@@ -102,7 +122,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  createAddOn(@CurrentUser() user: any, @Body() body: CreateAddOnDto) {
+  createAddOn(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createAddOnSchema)) body: CreateAddOnInput) {
     return this.providersService.createAddOn(user.id, body);
   }
 
@@ -114,7 +134,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Add-on not found' })
-  updateAddOn(@CurrentUser() user: any, @Param('addOnId') addOnId: string, @Body() body: UpdateAddOnDto) {
+  updateAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string, @Body(new ZodValidationPipe(updateAddOnSchema)) body: UpdateAddOnInput) {
     return this.providersService.updateAddOn(user.id, addOnId, body);
   }
 
@@ -125,7 +145,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Add-on not found' })
-  deleteAddOn(@CurrentUser() user: any, @Param('addOnId') addOnId: string) {
+  deleteAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string) {
     return this.providersService.deleteAddOn(user.id, addOnId);
   }
 
@@ -135,7 +155,7 @@ export class ProvidersController {
   @ApiResponse({ status: 200, description: 'Availability returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  getAvailability(@CurrentUser() user: any) {
+  getAvailability(@CurrentUser() user: AuthUser) {
     return this.providersService.getAvailability(user.id);
   }
 
@@ -146,7 +166,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  updateAvailability(@CurrentUser() user: any, @Body() body: UpdateAvailabilityDto) {
+  updateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateAvailabilitySchema)) body: UpdateAvailabilityInput) {
     return this.providersService.updateAvailability(user.id, body);
   }
 }

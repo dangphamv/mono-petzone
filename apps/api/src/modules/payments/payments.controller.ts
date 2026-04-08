@@ -1,7 +1,12 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { createPaymentSchema, refundSchema } from '@petzone/validators';
+import type { CreatePaymentInput, RefundInput } from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto, RefundDto } from './dto';
 
@@ -17,7 +22,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Order not in payable status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  create(@CurrentUser() user: any, @Body() body: CreatePaymentDto) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPaymentSchema)) body: CreatePaymentInput) {
     return this.paymentsService.create(user.id, body);
   }
 
@@ -36,8 +41,15 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payouts list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  getPayouts(@CurrentUser() user: any) {
-    return this.paymentsService.getPayouts(user.id);
+  getPayouts(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.paymentsService.getPayouts(user.id, {
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Post('payouts/request')
@@ -47,7 +59,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'No available balance for payout' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  requestPayout(@CurrentUser() user: any) {
+  requestPayout(@CurrentUser() user: AuthUser) {
     return this.paymentsService.requestPayout(user.id);
   }
 
@@ -57,7 +69,7 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment details returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  findByOrder(@CurrentUser() user: any, @Param('orderId') orderId: string) {
+  findByOrder(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.paymentsService.findByOrder(user.id, orderId);
   }
 
@@ -68,7 +80,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Order not eligible for refund' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order or payment not found' })
-  refund(@CurrentUser() user: any, @Param('orderId') orderId: string, @Body() body: RefundDto) {
+  refund(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string, @Body(new ZodValidationPipe(refundSchema)) body: RefundInput) {
     return this.paymentsService.refund(user.id, orderId, body);
   }
 }

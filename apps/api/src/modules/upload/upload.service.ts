@@ -1,12 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { PresignedUrlDto, UploadImageDto } from './dto';
+import type { PresignedUrlInput, UploadImageInput } from '@petzone/validators';
 
 @Injectable()
 export class UploadService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getPresignedUrl(userId: string, body: PresignedUrlDto) {
+  async getPresignedUrl(userId: string, body: PresignedUrlInput) {
     const filePath = `${userId}/${Date.now()}-${body.filename}`;
 
     const { data, error } = await this.supabase.client.storage
@@ -18,7 +18,7 @@ export class UploadService {
     return { url: data.signedUrl, path: data.path };
   }
 
-  async uploadImage(userId: string, body: UploadImageDto) {
+  async uploadImage(userId: string, body: UploadImageInput) {
     const filePath = `${userId}/${Date.now()}-${body.filename}`;
     const buffer = Buffer.from(body.base64, 'base64');
 

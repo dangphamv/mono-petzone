@@ -1,7 +1,28 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import {
+  sendOtpSchema,
+  verifyOtpSchema,
+  loginSchema,
+  registerSchema,
+  googleAuthSchema,
+  refreshTokenSchema,
+  selectRoleSchema,
+} from '@petzone/validators';
+import type {
+  SendOtpInput,
+  VerifyOtpInput,
+  LoginInput,
+  RegisterInput,
+  GoogleAuthInput,
+  RefreshTokenInput,
+  SelectRoleInput,
+} from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AuthService } from './auth.service';
 import { SendOtpDto, VerifyOtpDto, LoginDto, RegisterDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto } from './dto';
 
@@ -12,62 +33,68 @@ export class AuthController {
 
   @Post('send-otp')
   @ApiBearerAuth('access-token')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @ApiOperation({ summary: 'Send OTP to phone number or email' })
   @ApiResponse({ status: 201, description: 'OTP sent successfully' })
   @ApiResponse({ status: 400, description: 'Invalid phone number format' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 429, description: 'Too many OTP requests' })
-  sendOtp(@CurrentUser() user: any, @Body() body: SendOtpDto) {
+  sendOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(sendOtpSchema)) body: SendOtpInput) {
     return this.authService.sendOtp(user.id, body);
   }
 
   @Post('verify-otp')
   @ApiBearerAuth('access-token')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Verify OTP and return session' })
   @ApiResponse({ status: 201, description: 'OTP verified, session returned' })
   @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 429, description: 'Too many verification attempts' })
-  verifyOtp(@CurrentUser() user: any, @Body() body: VerifyOtpDto) {
+  verifyOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpInput) {
     return this.authService.verifyOtp(user.id, body);
   }
 
   @Post('login')
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 201, description: 'Login successful' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
   @ApiResponse({ status: 429, description: 'Too many login attempts' })
-  login(@Body() body: LoginDto) {
+  login(@Body(new ZodValidationPipe(loginSchema)) body: LoginInput) {
     return this.authService.login(body);
   }
 
   @Post('register')
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 409, description: 'Email or phone already registered' })
-  register(@Body() body: RegisterDto) {
+  register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterInput) {
     return this.authService.register(body);
   }
 
   @Post('google')
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Authenticate with Google OAuth' })
   @ApiResponse({ status: 201, description: 'Google auth successful' })
   @ApiResponse({ status: 400, description: 'Invalid Google ID token' })
-  google(@Body() body: GoogleAuthDto) {
+  google(@Body(new ZodValidationPipe(googleAuthSchema)) body: GoogleAuthInput) {
     return this.authService.google(body);
   }
 
   @Post('refresh')
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 201, description: 'Token refreshed' })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  refresh(@Body() body: RefreshTokenDto) {
+  refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenInput) {
     return this.authService.refresh(body);
   }
 
@@ -78,7 +105,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid role value' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'Role already selected' })
-  selectRole(@CurrentUser() user: any, @Body() body: SelectRoleDto) {
+  selectRole(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(selectRoleSchema)) body: SelectRoleInput) {
     return this.authService.selectRole(user.id, body);
   }
 
@@ -87,7 +114,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout and invalidate session' })
   @ApiResponse({ status: 201, description: 'Logged out successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  logout(@CurrentUser() user: any) {
+  logout(@CurrentUser() user: AuthUser) {
     return this.authService.logout(user.id);
   }
 }

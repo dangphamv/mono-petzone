@@ -1,6 +1,10 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { uploadCheckInPhotosSchema } from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
+import type { UploadCheckInPhotosInput } from '@petzone/validators';
 import { CheckInService } from './check-in.service';
 import { UploadCheckInPhotosDto } from './dto';
 
@@ -17,9 +21,9 @@ export class CheckInController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   uploadPhotos(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
-    @Body() body: UploadCheckInPhotosDto,
+    @Body(new ZodValidationPipe(uploadCheckInPhotosSchema)) body: UploadCheckInPhotosInput,
   ) {
     return this.checkInService.uploadPhotos(user.id, orderId, body);
   }
@@ -29,7 +33,7 @@ export class CheckInController {
   @ApiResponse({ status: 200, description: 'Photos returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  getPhotos(@CurrentUser() user: any, @Param('orderId') orderId: string) {
+  getPhotos(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.checkInService.getPhotos(user.id, orderId);
   }
 }

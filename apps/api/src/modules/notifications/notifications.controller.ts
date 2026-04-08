@@ -1,6 +1,10 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
+import { registerDeviceTokenSchema, type RegisterDeviceTokenInput } from '@petzone/validators';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 import { NotificationsService } from './notifications.service';
 import { RegisterDeviceTokenDto } from './dto';
 
@@ -14,8 +18,15 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List notifications for current user' })
   @ApiResponse({ status: 200, description: 'Notifications returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll(@CurrentUser() user: any) {
-    return this.notificationsService.findAll(user.id);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.notificationsService.findAll(user.id, {
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
   }
 
   @Patch(':id/read')
@@ -23,7 +34,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  markRead(@CurrentUser() user: any, @Param('id') id: string) {
+  markRead(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.notificationsService.markRead(user.id, id);
   }
 
@@ -31,7 +42,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark all notifications as read' })
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  markAllRead(@CurrentUser() user: any) {
+  markAllRead(@CurrentUser() user: AuthUser) {
     return this.notificationsService.markAllRead(user.id);
   }
 
@@ -40,7 +51,7 @@ export class NotificationsController {
   @ApiResponse({ status: 201, description: 'Device token registered' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  registerDeviceToken(@CurrentUser() user: any, @Body() body: RegisterDeviceTokenDto) {
+  registerDeviceToken(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerDeviceTokenSchema)) body: RegisterDeviceTokenInput) {
     return this.notificationsService.registerDeviceToken(user.id, body);
   }
 
@@ -49,7 +60,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Device token removed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Device token not found' })
-  removeDeviceToken(@CurrentUser() user: any, @Param('token') token: string) {
+  removeDeviceToken(@CurrentUser() user: AuthUser, @Param('token') token: string) {
     return this.notificationsService.removeDeviceToken(user.id, token);
   }
 }

@@ -7,7 +7,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { createHash, createHmac } from 'crypto';
-import type { SendOtpDto, VerifyOtpDto, LoginDto, RegisterDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto } from './dto';
+import { OTP_COLUMNS, USER_COLUMNS } from '../../common/constants/columns';
+import type {
+  SendOtpInput,
+  VerifyOtpInput,
+  LoginInput,
+  RegisterInput,
+  GoogleAuthInput,
+  RefreshTokenInput,
+  SelectRoleInput,
+} from '@petzone/validators';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +25,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async sendOtp(userId: string, body: SendOtpDto) {
+  async sendOtp(userId: string, body: SendOtpInput) {
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const otpHash = createHash('sha256').update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -38,10 +47,10 @@ export class AuthService {
     };
   }
 
-  async verifyOtp(userId: string, body: VerifyOtpDto) {
+  async verifyOtp(userId: string, body: VerifyOtpInput) {
     const { data: otpRecord, error: otpError } = await this.supabase.client
       .from('otp_verifications')
-      .select('*')
+      .select(OTP_COLUMNS)
       .eq('phone', body.phone)
       .eq('is_used', false)
       .order('created_at', { ascending: false })
@@ -80,7 +89,7 @@ export class AuthService {
       .from('users')
       .update({ phone: body.phone, updated_at: new Date().toISOString() })
       .eq('id', userId)
-      .select()
+      .select(USER_COLUMNS)
       .single();
 
     if (updateError) throw new BadRequestException(updateError.message);
@@ -88,7 +97,7 @@ export class AuthService {
     return { message: 'Phone verified', user };
   }
 
-  async login(body: LoginDto) {
+  async login(body: LoginInput) {
     const { data, error } = await this.supabase.createAuthClient().auth.signInWithPassword({
       email: body.email,
       password: body.password,
@@ -103,7 +112,7 @@ export class AuthService {
 
     const { data: user } = await this.supabase.client
       .from('users')
-      .select('*')
+      .select(USER_COLUMNS)
       .eq('id', data.user.id)
       .single();
 
@@ -114,7 +123,7 @@ export class AuthService {
     };
   }
 
-  async register(body: RegisterDto) {
+  async register(body: RegisterInput) {
     let authUserId: string;
 
     const { data: authData, error: authError } = await this.supabase.client.auth.admin
@@ -130,7 +139,7 @@ export class AuthService {
         throw new BadRequestException(authError.message);
       }
 
-      // Auth user exists — check if public.users row exists too
+      // Auth user exists -- check if public.users row exists too
       const { data: existingUser } = await this.supabase.client
         .from('users')
         .select('id')
@@ -141,9 +150,9 @@ export class AuthService {
         throw new ConflictException('Email already registered');
       }
 
-      // Orphaned auth user (no public.users row) — recover by updating password
+      // Orphaned auth user (no public.users row) -- recover by updating password
       const listResult = await this.supabase.client.auth.admin.listUsers();
-      const orphan = listResult.data.users.find((u: any) => u.email === body.email);
+      const orphan = listResult.data.users.find((u: { email?: string }) => u.email === body.email);
       if (!orphan) throw new ConflictException('Email already registered');
 
       await this.supabase.client.auth.admin.updateUserById(orphan.id, { password: body.password });
@@ -161,7 +170,7 @@ export class AuthService {
         phone: body.phone ?? null,
         role: 'owner',
       })
-      .select()
+      .select(USER_COLUMNS)
       .single();
 
     if (insertError) throw new BadRequestException(insertError.message);
@@ -178,7 +187,7 @@ export class AuthService {
     };
   }
 
-  async google(body: GoogleAuthDto) {
+  async google(body: GoogleAuthInput) {
     const { data, error } = await this.supabase.createAuthClient().auth.signInWithIdToken({
       provider: 'google',
       token: body.id_token,
@@ -190,7 +199,7 @@ export class AuthService {
     const authUser = data.user;
     const { data: existingUser } = await this.supabase.client
       .from('users')
-      .select('*')
+      .select(USER_COLUMNS)
       .eq('id', authUser.id)
       .single();
 
@@ -207,7 +216,7 @@ export class AuthService {
           social_id: authUser.user_metadata?.sub ?? null,
           role: 'owner',
         })
-        .select()
+        .select(USER_COLUMNS)
         .single();
       if (insertError) throw new BadRequestException(insertError.message);
       user = newUser;
@@ -219,7 +228,7 @@ export class AuthService {
           social_provider: 'google',
         })
         .eq('id', authUser.id)
-        .select()
+        .select(USER_COLUMNS)
         .single();
       user = updated;
     }
@@ -231,7 +240,7 @@ export class AuthService {
     };
   }
 
-  async refresh(body: RefreshTokenDto) {
+  async refresh(body: RefreshTokenInput) {
     const { data, error } = await this.supabase.createAuthClient().auth.refreshSession({
       refresh_token: body.refresh_token,
     });
@@ -244,12 +253,12 @@ export class AuthService {
     };
   }
 
-  async selectRole(userId: string, body: SelectRoleDto) {
+  async selectRole(userId: string, body: SelectRoleInput) {
     const { data, error } = await this.supabase.client
       .from('users')
       .update({ role: body.role, updated_at: new Date().toISOString() })
       .eq('id', userId)
-      .select()
+      .select(USER_COLUMNS)
       .single();
 
     if (error) throw new BadRequestException(error.message);

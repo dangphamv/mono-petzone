@@ -29,3 +29,11 @@ export type RequestInfoInput = z.infer<typeof requestInfoSchema>
 export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>
 export type SuspendUserInput = z.infer<typeof suspendUserSchema>
 export type ModerateReviewInput = z.infer<typeof moderateReviewSchema>
+
+export const updateConfigSchema = z.object({
+  commission_rate: z.number().min(0).max(1).optional(),
+  auto_confirm_hours: z.number().int().positive().optional(),
+  payment_timeout_hours: z.number().int().positive().optional(),
+})
+
+export type UpdateConfigInput = z.infer<typeof updateConfigSchema>

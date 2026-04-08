@@ -25,7 +25,7 @@ export const googleAuthSchema = z.object({
 })
 
 export const selectRoleSchema = z.object({
-  role: z.enum(['owner', 'provider']),
+  role: z.enum(['owner', 'provider', 'admin']),
 })
 
 export const refreshTokenSchema = z.object({
@@ -38,3 +38,4 @@ export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>
 export type SelectRoleInput = z.infer<typeof selectRoleSchema>
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>

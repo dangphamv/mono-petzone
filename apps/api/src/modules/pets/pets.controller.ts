@@ -1,9 +1,17 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PetsService } from './pets.service';
 import { CreatePetDto, UpdatePetDto } from './dto';
+import {
+  createPetSchema,
+  type CreatePetInput,
+  updatePetSchema,
+  type UpdatePetInput,
+} from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
 
 @ApiTags('Pets')
 @Controller('pets')
@@ -16,7 +24,7 @@ export class PetsController {
   @ApiResponse({ status: 201, description: 'Pet created successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@CurrentUser() user: any, @Body() body: CreatePetDto) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPetSchema)) body: CreatePetInput) {
     return this.petsService.create(user.id, body);
   }
 
@@ -25,8 +33,15 @@ export class PetsController {
   @ApiOperation({ summary: 'List all pets for current user' })
   @ApiResponse({ status: 200, description: 'List of pets returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll(@CurrentUser() user: any) {
-    return this.petsService.findAll(user.id);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.petsService.findAll(user.id, {
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    });
   }
 
   @Get('breeds/:species')
@@ -44,7 +59,7 @@ export class PetsController {
   @ApiResponse({ status: 200, description: 'Pet details returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Pet not found' })
-  findOne(@CurrentUser() user: any, @Param('id') id: string) {
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.petsService.findOne(user.id, id);
   }
 
@@ -55,7 +70,7 @@ export class PetsController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Pet not found' })
-  update(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdatePetDto) {
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updatePetSchema)) body: UpdatePetInput) {
     return this.petsService.update(user.id, id, body);
   }
 
@@ -65,7 +80,7 @@ export class PetsController {
   @ApiResponse({ status: 200, description: 'Pet deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Pet not found' })
-  remove(@CurrentUser() user: any, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.petsService.remove(user.id, id);
   }
 }

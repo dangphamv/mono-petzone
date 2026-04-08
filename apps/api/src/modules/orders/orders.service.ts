@@ -5,6 +5,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, ORDER_HISTORY_COLUMNS } from '../../common/constants/columns';
+import { paginate, type PaginationParams } from '../../common/utils/pagination';
+import type { CreateOrderInput, UpdateOrderStatusInput, CancelOrderInput } from '@petzone/validators';
 
 const STATUS_TRANSITIONS: Record<string, { next: string; allowed_actors: string[] }[]> = {
   pending_payment: [{ next: 'pending', allowed_actors: ['owner'] }],
@@ -17,19 +20,40 @@ const STATUS_TRANSITIONS: Record<string, { next: string; allowed_actors: string[
 
 const CANCELLABLE_STATUSES = ['pending_payment', 'pending', 'confirmed'];
 
+interface OrderWithProvider {
+  id: string;
+  owner_id: string;
+  provider_id: string;
+  status: string;
+  check_in_date: string;
+  total_price: number;
+  cancellation_policy: string;
+  providers?: { id: string; user_id: string }[] | { id: string; user_id: string } | null;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async create(userId: string, body: any) {
-    const { data: roomType, error: rtErr } = await this.supabase.client
-      .from('room_types')
-      .select('id, price_per_night, provider_id')
-      .eq('id', body.room_type_id)
-      .single();
+  async create(userId: string, body: CreateOrderInput) {
+    const [roomResult, providerResult] = await Promise.all([
+      this.supabase.client
+        .from('room_types')
+        .select('id, price_per_night, provider_id')
+        .eq('id', body.room_type_id)
+        .single(),
+      this.supabase.client
+        .from('providers')
+        .select('cancellation_policy')
+        .eq('id', body.provider_id)
+        .single(),
+    ]);
+
+    const { data: roomType, error: rtErr } = roomResult;
     if (rtErr || !roomType) throw new NotFoundException('Room type not found');
 
-    const addOns: any[] = [];
+    const addOns: { id: string; name: string; price: number; price_type: string }[] = [];
     if (body.add_on_ids?.length) {
       const { data, error } = await this.supabase.client
         .from('add_on_services')
@@ -52,7 +76,7 @@ export class OrdersService {
       price_type: a.price_type,
       subtotal: a.price_type === 'per_night' ? a.price * numNights : a.price,
     }));
-    const addOnTotal = addOnBreakdown.reduce((sum: number, a: any) => sum + a.subtotal, 0);
+    const addOnTotal = addOnBreakdown.reduce((sum, a) => sum + a.subtotal, 0);
     const totalPrice = roomTotal + addOnTotal;
 
     const priceBreakdown = {
@@ -61,11 +85,7 @@ export class OrdersService {
       total: totalPrice,
     };
 
-    const { data: provider } = await this.supabase.client
-      .from('providers')
-      .select('cancellation_policy')
-      .eq('id', body.provider_id)
-      .single();
+    const { data: provider } = providerResult;
 
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
@@ -85,7 +105,7 @@ export class OrdersService {
         total_price: totalPrice,
         cancellation_policy: provider?.cancellation_policy || 'flexible',
       })
-      .select()
+      .select(ORDER_COLUMNS)
       .single();
     if (orderErr) throw new BadRequestException(orderErr.message);
 
@@ -99,16 +119,19 @@ export class OrdersService {
     return order;
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, params: PaginationParams) {
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+
     const { data: providerRows } = await this.supabase.client
       .from('providers')
       .select('id')
       .eq('user_id', userId);
-    const providerIds = (providerRows || []).map((p: any) => p.id);
+    const providerIds = (providerRows || []).map((p: { id: string }) => p.id);
 
     let query = this.supabase.client
       .from('orders')
-      .select('*, providers(id, business_name)')
+      .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (providerIds.length) {
@@ -117,41 +140,42 @@ export class OrdersService {
       query = query.eq('owner_id', userId);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
-    return data;
+    return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
   async findOne(userId: string, id: string) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select('*, room_types(*), providers(id, business_name, user_id)')
+      .select(`${ORDER_COLUMNS}, room_types(*), providers(id, business_name, user_id)`)
       .eq('id', id)
       .single();
     if (error || !order) throw new NotFoundException('Order not found');
 
-    await this.verifyAccess(userId, order);
+    await this.verifyAccess(userId, order as unknown as OrderWithProvider);
     return order;
   }
 
-  async updateStatus(userId: string, id: string, body: any) {
+  async updateStatus(userId: string, id: string, body: UpdateOrderStatusInput) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select('*, providers(id, user_id)')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
       .eq('id', id)
       .single();
     if (error || !order) throw new NotFoundException('Order not found');
 
-    const actorType = await this.getActorType(userId, order);
-    const transitions = STATUS_TRANSITIONS[order.status];
-    if (!transitions) throw new BadRequestException(`Cannot transition from status '${order.status}'`);
+    const typedOrder = order as unknown as OrderWithProvider;
+    const actorType = await this.getActorType(userId, typedOrder);
+    const transitions = STATUS_TRANSITIONS[typedOrder.status];
+    if (!transitions) throw new BadRequestException(`Cannot transition from status '${typedOrder.status}'`);
 
     const transition = transitions.find((t) => t.next === body.status);
-    if (!transition) throw new BadRequestException(`Invalid status transition: ${order.status} → ${body.status}`);
+    if (!transition) throw new BadRequestException(`Invalid status transition: ${typedOrder.status} → ${body.status}`);
     if (!transition.allowed_actors.includes(actorType))
       throw new ForbiddenException(`Role '${actorType}' cannot perform this transition`);
 
-    const updates: any = { status: body.status, updated_at: new Date().toISOString() };
+    const updates: Record<string, unknown> = { status: body.status, updated_at: new Date().toISOString() };
     if (body.status === 'confirmed') updates.provider_response_deadline = null;
     if (body.status === 'completed') updates.completed_at = new Date().toISOString();
 
@@ -159,7 +183,7 @@ export class OrdersService {
       .from('orders')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select(ORDER_COLUMNS)
       .single();
     if (updateErr) throw new BadRequestException(updateErr.message);
 
@@ -174,21 +198,22 @@ export class OrdersService {
     return updated;
   }
 
-  async cancel(userId: string, id: string, body: any) {
+  async cancel(userId: string, id: string, body: CancelOrderInput) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select('*, providers(id, user_id)')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
       .eq('id', id)
       .single();
     if (error || !order) throw new NotFoundException('Order not found');
 
-    await this.verifyAccess(userId, order);
+    const typedOrder = order as unknown as OrderWithProvider;
+    await this.verifyAccess(userId, typedOrder);
 
-    if (!CANCELLABLE_STATUSES.includes(order.status))
-      throw new BadRequestException(`Cannot cancel order in status '${order.status}'`);
+    if (!CANCELLABLE_STATUSES.includes(typedOrder.status))
+      throw new BadRequestException(`Cannot cancel order in status '${typedOrder.status}'`);
 
-    const cancelledBy = order.owner_id === userId ? 'owner' : 'provider';
-    const refundAmount = this.calculateRefund(order);
+    const cancelledBy = typedOrder.owner_id === userId ? 'owner' : 'provider';
+    const refundAmount = this.calculateRefund(typedOrder);
 
     const { data: updated, error: updateErr } = await this.supabase.client
       .from('orders')
@@ -201,7 +226,7 @@ export class OrdersService {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select()
+      .select(ORDER_COLUMNS)
       .single();
     if (updateErr) throw new BadRequestException(updateErr.message);
 
@@ -219,35 +244,42 @@ export class OrdersService {
   async getHistory(userId: string, id: string) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
-      .select('*, providers(id, user_id)')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
       .eq('id', id)
       .single();
     if (orderErr || !order) throw new NotFoundException('Order not found');
 
-    await this.verifyAccess(userId, order);
+    await this.verifyAccess(userId, order as unknown as OrderWithProvider);
 
     const { data, error } = await this.supabase.client
       .from('order_status_history')
-      .select('*')
+      .select(ORDER_HISTORY_COLUMNS)
       .eq('order_id', id)
       .order('created_at', { ascending: true });
     if (error) throw new BadRequestException(error.message);
     return data;
   }
 
-  private async verifyAccess(userId: string, order: any) {
+  private getProviderUserId(order: OrderWithProvider): string | undefined {
+    const p = order.providers;
+    if (!p) return undefined;
+    if (Array.isArray(p)) return p[0]?.user_id;
+    return p.user_id;
+  }
+
+  private verifyAccess(userId: string, order: OrderWithProvider): void {
     const isOwner = order.owner_id === userId;
-    const isProvider = order.providers?.user_id === userId;
+    const isProvider = this.getProviderUserId(order) === userId;
     if (!isOwner && !isProvider) throw new ForbiddenException('No access to this order');
   }
 
-  private async getActorType(userId: string, order: any): Promise<string> {
+  private getActorType(userId: string, order: OrderWithProvider): string {
     if (order.owner_id === userId) return 'owner';
-    if (order.providers?.user_id === userId) return 'provider';
+    if (this.getProviderUserId(order) === userId) return 'provider';
     throw new ForbiddenException('No access to this order');
   }
 
-  private calculateRefund(order: any): number {
+  private calculateRefund(order: OrderWithProvider): number {
     if (order.status === 'pending_payment') return 0;
 
     const now = new Date();

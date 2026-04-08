@@ -16,7 +16,7 @@ export const cancelOrderSchema = z.object({
 })
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['confirmed', 'checked_in', 'in_progress', 'check_out', 'completed']),
+  status: z.enum(['pending', 'confirmed', 'checked_in', 'in_progress', 'check_out', 'completed']),
   note: z.string().max(500).optional(),
 })
 

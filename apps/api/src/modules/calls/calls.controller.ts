@@ -1,6 +1,10 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { initiateCallSchema } from '@petzone/validators';
+import type { AuthUser } from '../../common/interfaces/auth-user';
+import type { InitiateCallInput } from '@petzone/validators';
 import { CallsService } from './calls.service';
 import { InitiateCallDto } from './dto';
 
@@ -18,9 +22,9 @@ export class CallsController {
   @ApiResponse({ status: 403, description: 'Not a participant of this conversation' })
   @ApiResponse({ status: 404, description: 'Conversation not found' })
   initiate(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Param('conversationId') conversationId: string,
-    @Body() body: InitiateCallDto,
+    @Body(new ZodValidationPipe(initiateCallSchema)) body: InitiateCallInput,
   ) {
     return this.callsService.initiate(user.id, conversationId, body);
   }
@@ -30,7 +34,7 @@ export class CallsController {
   @ApiResponse({ status: 200, description: 'Call log returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Conversation not found' })
-  getLog(@CurrentUser() user: any, @Param('conversationId') conversationId: string) {
+  getLog(@CurrentUser() user: AuthUser, @Param('conversationId') conversationId: string) {
     return this.callsService.getLog(user.id, conversationId);
   }
 }

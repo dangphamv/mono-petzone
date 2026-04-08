@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { StatusReportsService } from './status-reports.service';
+import { CreateStatusReportDto } from './dto';
 
 @ApiTags('Status Reports')
 @ApiBearerAuth('access-token')
@@ -11,21 +13,37 @@ export class StatusReportsController {
   @Post(':orderId')
   @ApiOperation({ summary: 'Create a daily status report' })
   @ApiResponse({ status: 201, description: 'Status report created' })
-  create(@Param('orderId') orderId: string, @Body() body: any) {
-    return this.statusReportsService.create(orderId, body);
+  @ApiResponse({ status: 400, description: 'Validation error or report already submitted today' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Only the provider can create status reports' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  create(
+    @CurrentUser() user: any,
+    @Param('orderId') orderId: string,
+    @Body() body: CreateStatusReportDto,
+  ) {
+    return this.statusReportsService.create(user.id, orderId, body);
   }
 
   @Get(':orderId')
   @ApiOperation({ summary: 'List status reports for an order' })
   @ApiResponse({ status: 200, description: 'Status reports returned' })
-  findAll(@Param('orderId') orderId: string) {
-    return this.statusReportsService.findAll(orderId);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  findAll(@CurrentUser() user: any, @Param('orderId') orderId: string) {
+    return this.statusReportsService.findAll(user.id, orderId);
   }
 
   @Get(':orderId/:reportId')
   @ApiOperation({ summary: 'Get a specific status report' })
   @ApiResponse({ status: 200, description: 'Status report returned' })
-  findOne(@Param('orderId') orderId: string, @Param('reportId') reportId: string) {
-    return this.statusReportsService.findOne(orderId, reportId);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Report not found' })
+  findOne(
+    @CurrentUser() user: any,
+    @Param('orderId') orderId: string,
+    @Param('reportId') reportId: string,
+  ) {
+    return this.statusReportsService.findOne(user.id, orderId, reportId);
   }
 }

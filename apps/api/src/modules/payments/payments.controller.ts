@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaymentsService } from './payments.service';
+import { CreatePaymentDto, RefundDto } from './dto';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -12,47 +14,61 @@ export class PaymentsController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a payment for an order' })
   @ApiResponse({ status: 201, description: 'Payment created, redirect URL returned' })
-  create(@Body() body: any) {
-    return this.paymentsService.create(body);
+  @ApiResponse({ status: 400, description: 'Order not in payable status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  create(@CurrentUser() user: any, @Body() body: CreatePaymentDto) {
+    return this.paymentsService.create(user.id, body);
   }
 
   @Get('callback')
   @Public()
   @ApiOperation({ summary: 'Payment gateway webhook callback' })
   @ApiResponse({ status: 200, description: 'Webhook processed' })
+  @ApiResponse({ status: 400, description: 'Invalid webhook signature' })
   callback() {
     return this.paymentsService.callback();
-  }
-
-  @Get(':orderId')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get payment details for an order' })
-  @ApiResponse({ status: 200, description: 'Payment details returned' })
-  findByOrder(@Param('orderId') orderId: string) {
-    return this.paymentsService.findByOrder(orderId);
-  }
-
-  @Post(':orderId/refund')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Request a refund for an order' })
-  @ApiResponse({ status: 201, description: 'Refund initiated' })
-  refund(@Param('orderId') orderId: string, @Body() body: any) {
-    return this.paymentsService.refund(orderId, body);
   }
 
   @Get('payouts')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List provider payouts' })
   @ApiResponse({ status: 200, description: 'Payouts list returned' })
-  getPayouts() {
-    return this.paymentsService.getPayouts();
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  getPayouts(@CurrentUser() user: any) {
+    return this.paymentsService.getPayouts(user.id);
   }
 
   @Post('payouts/request')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Request a payout' })
   @ApiResponse({ status: 201, description: 'Payout request submitted' })
-  requestPayout(@Body() body: any) {
-    return this.paymentsService.requestPayout(body);
+  @ApiResponse({ status: 400, description: 'No available balance for payout' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  requestPayout(@CurrentUser() user: any) {
+    return this.paymentsService.requestPayout(user.id);
+  }
+
+  @Get(':orderId')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get payment details for an order' })
+  @ApiResponse({ status: 200, description: 'Payment details returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Payment not found' })
+  findByOrder(@CurrentUser() user: any, @Param('orderId') orderId: string) {
+    return this.paymentsService.findByOrder(user.id, orderId);
+  }
+
+  @Post(':orderId/refund')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Request a refund for an order' })
+  @ApiResponse({ status: 201, description: 'Refund initiated' })
+  @ApiResponse({ status: 400, description: 'Order not eligible for refund' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order or payment not found' })
+  refund(@CurrentUser() user: any, @Param('orderId') orderId: string, @Body() body: RefundDto) {
+    return this.paymentsService.refund(user.id, orderId, body);
   }
 }

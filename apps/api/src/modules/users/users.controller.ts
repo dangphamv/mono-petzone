@@ -1,6 +1,8 @@
 import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
+import { UpdateProfileDto, NotificationPreferencesDto } from './dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -11,20 +13,25 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Current user profile returned' })
-  getMe() {
-    return this.usersService.getMe();
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getMe(@CurrentUser() user: any) {
+    return this.usersService.getMe(user.id);
   }
 
   @Patch('me')
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
-  updateMe(@Body() body: any) {
-    return this.usersService.updateMe(body);
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  updateMe(@CurrentUser() user: any, @Body() body: UpdateProfileDto) {
+    return this.usersService.updateMe(user.id, body);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User profile returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   getById(@Param('id') id: string) {
     return this.usersService.getById(id);
   }
@@ -32,7 +39,9 @@ export class UsersController {
   @Patch('me/notification-preferences')
   @ApiOperation({ summary: 'Update notification preferences' })
   @ApiResponse({ status: 200, description: 'Notification preferences updated' })
-  updateNotificationPreferences(@Body() body: any) {
-    return this.usersService.updateNotificationPreferences(body);
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  updateNotificationPreferences(@CurrentUser() user: any, @Body() body: NotificationPreferencesDto) {
+    return this.usersService.updateNotificationPreferences(user.id, body);
   }
 }

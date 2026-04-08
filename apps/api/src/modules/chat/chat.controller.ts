@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
+import { SendMessageDto } from './dto';
 
 @ApiTags('Chat')
 @ApiBearerAuth('access-token')
@@ -11,28 +13,38 @@ export class ChatController {
   @Get('conversations')
   @ApiOperation({ summary: 'List conversations for current user' })
   @ApiResponse({ status: 200, description: 'Conversations returned' })
-  getConversations() {
-    return this.chatService.getConversations();
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getConversations(@CurrentUser() user: any) {
+    return this.chatService.getConversations(user.id);
   }
 
   @Get('conversations/:id/messages')
   @ApiOperation({ summary: 'Get messages in a conversation' })
   @ApiResponse({ status: 200, description: 'Messages returned' })
-  getMessages(@Param('id') id: string) {
-    return this.chatService.getMessages(id);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a participant of this conversation' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  getMessages(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.chatService.getMessages(user.id, id);
   }
 
   @Post('conversations/:id/messages')
   @ApiOperation({ summary: 'Send a message in a conversation' })
   @ApiResponse({ status: 201, description: 'Message sent' })
-  sendMessage(@Param('id') id: string, @Body() body: any) {
-    return this.chatService.sendMessage(id, body);
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a participant of this conversation' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  sendMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: SendMessageDto) {
+    return this.chatService.sendMessage(user.id, id, body);
   }
 
   @Patch('conversations/:id/read')
   @ApiOperation({ summary: 'Mark conversation as read' })
   @ApiResponse({ status: 200, description: 'Conversation marked as read' })
-  markRead(@Param('id') id: string) {
-    return this.chatService.markRead(id);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  markRead(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.chatService.markRead(user.id, id);
   }
 }

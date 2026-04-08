@@ -19,6 +19,19 @@ export class SupabaseService {
     );
   }
 
+  createAuthClient(): SupabaseClient {
+    return createClient(
+      this.config.getOrThrow<string>('SUPABASE_URL'),
+      this.config.getOrThrow<string>('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+  }
+
   forUser(token: string): SupabaseClient {
     return createClient(
       this.config.getOrThrow<string>('SUPABASE_URL'),

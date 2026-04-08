@@ -17,6 +17,8 @@ export class SupabaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(SupabaseAuthGuard.name);
   private jwtSecret: Uint8Array | null = null;
 
+  private jwtIssuer: string;
+
   constructor(
     private readonly reflector: Reflector,
     private readonly supabase: SupabaseService,
@@ -27,6 +29,8 @@ export class SupabaseAuthGuard implements CanActivate {
       this.jwtSecret = new TextEncoder().encode(secret);
       this.logger.log('Local JWT verification enabled');
     }
+    const supabaseUrl = this.config?.get<string>('SUPABASE_URL') ?? '';
+    this.jwtIssuer = `${supabaseUrl}/auth/v1`;
   }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -67,7 +71,7 @@ export class SupabaseAuthGuard implements CanActivate {
     if (this.jwtSecret) {
       try {
         const { payload } = await jwtVerify(token, this.jwtSecret, {
-          issuer: 'supabase',
+          issuer: this.jwtIssuer,
         });
         if (!payload.sub) return null;
         return {
@@ -79,7 +83,7 @@ export class SupabaseAuthGuard implements CanActivate {
           user_metadata: payload.user_metadata ?? {},
         };
       } catch {
-        return null;
+        // Local verification failed (e.g. ES256 token with HS256 secret) — fall through to API
       }
     }
 

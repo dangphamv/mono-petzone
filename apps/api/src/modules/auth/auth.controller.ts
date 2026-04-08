@@ -13,15 +13,6 @@ import {
   refreshTokenSchema,
   selectRoleSchema,
 } from '@petzone/validators';
-import type {
-  SendOtpInput,
-  VerifyOtpInput,
-  LoginInput,
-  RegisterInput,
-  GoogleAuthInput,
-  RefreshTokenInput,
-  SelectRoleInput,
-} from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AuthService } from './auth.service';
 import { SendOtpDto, VerifyOtpDto, LoginDto, RegisterDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto } from './dto';
@@ -39,7 +30,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid phone number format' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 429, description: 'Too many OTP requests' })
-  sendOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(sendOtpSchema)) body: SendOtpInput) {
+  sendOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(sendOtpSchema)) body: SendOtpDto) {
     return this.authService.sendOtp(user.id, body);
   }
 
@@ -51,7 +42,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 429, description: 'Too many verification attempts' })
-  verifyOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpInput) {
+  verifyOtp(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpDto) {
     return this.authService.verifyOtp(user.id, body);
   }
 
@@ -63,7 +54,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
   @ApiResponse({ status: 429, description: 'Too many login attempts' })
-  login(@Body(new ZodValidationPipe(loginSchema)) body: LoginInput) {
+  login(@Body(new ZodValidationPipe(loginSchema)) body: LoginDto) {
     return this.authService.login(body);
   }
 
@@ -74,7 +65,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 409, description: 'Email or phone already registered' })
-  register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterInput) {
+  register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterDto) {
     return this.authService.register(body);
   }
 
@@ -84,7 +75,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Authenticate with Google OAuth' })
   @ApiResponse({ status: 201, description: 'Google auth successful' })
   @ApiResponse({ status: 400, description: 'Invalid Google ID token' })
-  google(@Body(new ZodValidationPipe(googleAuthSchema)) body: GoogleAuthInput) {
+  google(@Body(new ZodValidationPipe(googleAuthSchema)) body: GoogleAuthDto) {
     return this.authService.google(body);
   }
 
@@ -94,7 +85,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 201, description: 'Token refreshed' })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenInput) {
+  refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenDto) {
     return this.authService.refresh(body);
   }
 
@@ -105,7 +96,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid role value' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'Role already selected' })
-  selectRole(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(selectRoleSchema)) body: SelectRoleInput) {
+  selectRole(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(selectRoleSchema)) body: SelectRoleDto) {
     return this.authService.selectRole(user.id, body);
   }
 

@@ -5,7 +5,6 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { createPaymentSchema, refundSchema } from '@petzone/validators';
-import type { CreatePaymentInput, RefundInput } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto, RefundDto } from './dto';
@@ -22,7 +21,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Order not in payable status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPaymentSchema)) body: CreatePaymentInput) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPaymentSchema)) body: CreatePaymentDto) {
     return this.paymentsService.create(user.id, body);
   }
 
@@ -80,7 +79,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Order not eligible for refund' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order or payment not found' })
-  refund(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string, @Body(new ZodValidationPipe(refundSchema)) body: RefundInput) {
+  refund(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string, @Body(new ZodValidationPipe(refundSchema)) body: RefundDto) {
     return this.paymentsService.refund(user.id, orderId, body);
   }
 }

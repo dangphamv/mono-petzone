@@ -12,6 +12,9 @@ export class CreatePaymentDto {
 }
 
 export class RefundDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Order ID to refund' })
+  order_id: string;
+
   @ApiProperty({ example: 150000, description: 'Refund amount (positive number)' })
   amount: number;
 

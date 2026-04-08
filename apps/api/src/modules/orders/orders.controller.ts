@@ -8,11 +8,6 @@ import {
   updateOrderStatusSchema,
   cancelOrderSchema,
 } from '@petzone/validators';
-import type {
-  CreateOrderInput,
-  UpdateOrderStatusInput,
-  CancelOrderInput,
-} from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, CancelOrderDto, UpdateOrderStatusDto } from './dto';
@@ -29,7 +24,7 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Validation error or unavailable dates' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Provider or room not found' })
-  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createOrderSchema)) body: CreateOrderInput) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createOrderSchema)) body: CreateOrderDto) {
     return this.ordersService.create(user.id, body);
   }
 
@@ -64,7 +59,7 @@ export class OrdersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not allowed to update this order' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  updateStatus(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updateOrderStatusSchema)) body: UpdateOrderStatusInput) {
+  updateStatus(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updateOrderStatusSchema)) body: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(user.id, id, body);
   }
 
@@ -74,7 +69,7 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Order cannot be cancelled in current status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  cancel(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(cancelOrderSchema)) body: CancelOrderInput) {
+  cancel(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(cancelOrderSchema)) body: CancelOrderDto) {
     return this.ordersService.cancel(user.id, id, body);
   }
 

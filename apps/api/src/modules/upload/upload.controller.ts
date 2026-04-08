@@ -6,9 +6,7 @@ import { UploadService } from './upload.service';
 import { PresignedUrlDto, UploadImageDto } from './dto';
 import {
   presignedUrlSchema,
-  type PresignedUrlInput,
   uploadImageSchema,
-  type UploadImageInput,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 
@@ -23,7 +21,7 @@ export class UploadController {
   @ApiResponse({ status: 201, description: 'Presigned URL returned' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getPresignedUrl(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(presignedUrlSchema)) body: PresignedUrlInput) {
+  getPresignedUrl(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(presignedUrlSchema)) body: PresignedUrlDto) {
     return this.uploadService.getPresignedUrl(user.id, body);
   }
 
@@ -33,7 +31,7 @@ export class UploadController {
   @ApiResponse({ status: 400, description: 'Invalid image data or unsupported format' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 413, description: 'File too large' })
-  uploadImage(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(uploadImageSchema)) body: UploadImageInput) {
+  uploadImage(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(uploadImageSchema)) body: UploadImageDto) {
     return this.uploadService.uploadImage(user.id, body);
   }
 }

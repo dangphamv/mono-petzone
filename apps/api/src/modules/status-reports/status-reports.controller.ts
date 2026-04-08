@@ -4,7 +4,6 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { createStatusReportSchema } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
-import type { CreateStatusReportInput } from '@petzone/validators';
 import { StatusReportsService } from './status-reports.service';
 import { CreateStatusReportDto } from './dto';
 
@@ -24,7 +23,7 @@ export class StatusReportsController {
   create(
     @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
-    @Body(new ZodValidationPipe(createStatusReportSchema)) body: CreateStatusReportInput,
+    @Body(new ZodValidationPipe(createStatusReportSchema)) body: CreateStatusReportDto,
   ) {
     return this.statusReportsService.create(user.id, orderId, body);
   }

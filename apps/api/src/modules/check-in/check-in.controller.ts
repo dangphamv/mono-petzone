@@ -4,7 +4,6 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { uploadCheckInPhotosSchema } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
-import type { UploadCheckInPhotosInput } from '@petzone/validators';
 import { CheckInService } from './check-in.service';
 import { UploadCheckInPhotosDto } from './dto';
 
@@ -23,7 +22,7 @@ export class CheckInController {
   uploadPhotos(
     @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
-    @Body(new ZodValidationPipe(uploadCheckInPhotosSchema)) body: UploadCheckInPhotosInput,
+    @Body(new ZodValidationPipe(uploadCheckInPhotosSchema)) body: UploadCheckInPhotosDto,
   ) {
     return this.checkInService.uploadPhotos(user.id, orderId, body);
   }

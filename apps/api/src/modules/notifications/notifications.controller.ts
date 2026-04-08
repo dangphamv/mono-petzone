@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
-import { registerDeviceTokenSchema, type RegisterDeviceTokenInput } from '@petzone/validators';
+import { registerDeviceTokenSchema } from '@petzone/validators';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../common/interfaces/auth-user';
@@ -51,7 +51,7 @@ export class NotificationsController {
   @ApiResponse({ status: 201, description: 'Device token registered' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  registerDeviceToken(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerDeviceTokenSchema)) body: RegisterDeviceTokenInput) {
+  registerDeviceToken(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerDeviceTokenSchema)) body: RegisterDeviceTokenDto) {
     return this.notificationsService.registerDeviceToken(user.id, body);
   }
 

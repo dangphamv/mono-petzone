@@ -4,7 +4,6 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { initiateCallSchema } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
-import type { InitiateCallInput } from '@petzone/validators';
 import { CallsService } from './calls.service';
 import { InitiateCallDto } from './dto';
 
@@ -24,7 +23,7 @@ export class CallsController {
   initiate(
     @CurrentUser() user: AuthUser,
     @Param('conversationId') conversationId: string,
-    @Body(new ZodValidationPipe(initiateCallSchema)) body: InitiateCallInput,
+    @Body(new ZodValidationPipe(initiateCallSchema)) body: InitiateCallDto,
   ) {
     return this.callsService.initiate(user.id, conversationId, body);
   }

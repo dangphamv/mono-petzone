@@ -6,9 +6,7 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto, NotificationPreferencesDto } from './dto';
 import {
   updateProfileSchema,
-  type UpdateProfileInput,
   notificationPreferencesSchema,
-  type NotificationPreferencesInput,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 
@@ -31,7 +29,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateProfileSchema)) body: UpdateProfileInput) {
+  updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateProfileSchema)) body: UpdateProfileDto) {
     return this.usersService.updateMe(user.id, body);
   }
 
@@ -49,7 +47,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Notification preferences updated' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateNotificationPreferences(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(notificationPreferencesSchema)) body: NotificationPreferencesInput) {
+  updateNotificationPreferences(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(notificationPreferencesSchema)) body: NotificationPreferencesDto) {
     return this.usersService.updateNotificationPreferences(user.id, body);
   }
 }

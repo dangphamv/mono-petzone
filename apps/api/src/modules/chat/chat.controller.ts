@@ -5,7 +5,6 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { sendMessageBodySchema } from '@petzone/validators';
 import { PAGINATION } from '@petzone/shared';
 import type { AuthUser } from '../../common/interfaces/auth-user';
-import type { SendMessageBodyInput } from '@petzone/validators';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto';
 
@@ -58,7 +57,7 @@ export class ChatController {
   sendMessage(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(sendMessageBodySchema)) body: SendMessageBodyInput,
+    @Body(new ZodValidationPipe(sendMessageBodySchema)) body: SendMessageDto,
   ) {
     return this.chatService.sendMessage(user.id, id, body);
   }

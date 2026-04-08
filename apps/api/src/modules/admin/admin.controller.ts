@@ -2,11 +2,11 @@ import { Controller, Get, Patch, Put, Param, Body, Query } from '@nestjs/common'
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
 import {
-  verifyProviderSchema, type VerifyProviderInput,
-  resolveDisputeSchema, type ResolveDisputeInput,
-  suspendUserSchema, type SuspendUserInput,
-  moderateReviewSchema, type ModerateReviewInput,
-  updateConfigSchema, type UpdateConfigInput,
+  verifyProviderSchema,
+  resolveDisputeSchema,
+  suspendUserSchema,
+  moderateReviewSchema,
+  updateConfigSchema,
 } from '@petzone/validators';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -50,7 +50,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Provider not found' })
-  verifyProvider(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(verifyProviderSchema)) body: VerifyProviderInput) {
+  verifyProvider(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(verifyProviderSchema)) body: VerifyProviderDto) {
     return this.adminService.verifyProvider(user.id, id, body);
   }
 
@@ -85,7 +85,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Dispute not found' })
-  resolveDispute(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(resolveDisputeSchema)) body: ResolveDisputeInput) {
+  resolveDispute(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(resolveDisputeSchema)) body: ResolveDisputeDto) {
     return this.adminService.resolveDispute(user.id, id, body);
   }
 
@@ -108,7 +108,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  suspendUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(suspendUserSchema)) body: SuspendUserInput) {
+  suspendUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(suspendUserSchema)) body: SuspendUserDto) {
     return this.adminService.suspendUser(user.id, id, body);
   }
 
@@ -131,7 +131,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
   @ApiResponse({ status: 404, description: 'Review not found' })
-  moderateReview(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(moderateReviewSchema)) body: ModerateReviewInput) {
+  moderateReview(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(moderateReviewSchema)) body: ModerateReviewDto) {
     return this.adminService.moderateReview(user.id, id, body);
   }
 
@@ -159,7 +159,7 @@ export class AdminController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  updateConfig(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateConfigSchema)) body: UpdateConfigInput) {
+  updateConfig(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateConfigSchema)) body: UpdateConfigDto) {
     return this.adminService.updateConfig(user.id, body);
   }
 }

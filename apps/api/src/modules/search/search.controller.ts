@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
-import { searchProvidersSchema, type SearchProvidersInput } from '@petzone/validators';
+import { searchProvidersSchema } from '@petzone/validators';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodQueryValidationPipe } from '../../common/pipes/zod-query-validation.pipe';
@@ -20,7 +20,7 @@ export class SearchController {
   @ApiResponse({ status: 200, description: 'Search results returned' })
   @ApiResponse({ status: 400, description: 'Invalid search parameters' })
   searchProviders(
-    @Query(new ZodQueryValidationPipe(searchProvidersSchema)) query: SearchProvidersInput,
+    @Query(new ZodQueryValidationPipe(searchProvidersSchema)) query: SearchProvidersDto,
     @CurrentUser() user: AuthUser | undefined,
   ) {
     return this.searchService.searchProviders(query, user?.id);

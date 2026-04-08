@@ -12,15 +12,6 @@ import {
   updateAddOnSchema,
   updateAvailabilitySchema,
 } from '@petzone/validators';
-import type {
-  RegisterProviderInput,
-  UpdateListingInput,
-  CreateRoomInput,
-  UpdateRoomInput,
-  CreateAddOnInput,
-  UpdateAddOnInput,
-  UpdateAvailabilityInput,
-} from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ProvidersService } from './providers.service';
 import { RegisterProviderDto, UpdateListingDto, CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto, UpdateAvailabilityDto } from './dto';
@@ -37,7 +28,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'User already registered as provider' })
-  register(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerProviderSchema)) body: RegisterProviderInput) {
+  register(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(registerProviderSchema)) body: RegisterProviderDto) {
     return this.providersService.register(user.id, body);
   }
 
@@ -57,7 +48,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateListingSchema)) body: UpdateListingInput) {
+  updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateListingSchema)) body: UpdateListingDto) {
     return this.providersService.updateMe(user.id, body);
   }
 
@@ -78,7 +69,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  createRoom(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createRoomSchema)) body: CreateRoomInput) {
+  createRoom(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createRoomSchema)) body: CreateRoomDto) {
     return this.providersService.createRoom(user.id, body);
   }
 
@@ -90,7 +81,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  updateRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string, @Body(new ZodValidationPipe(updateRoomSchema)) body: UpdateRoomInput) {
+  updateRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string, @Body(new ZodValidationPipe(updateRoomSchema)) body: UpdateRoomDto) {
     return this.providersService.updateRoom(user.id, roomId, body);
   }
 
@@ -122,7 +113,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  createAddOn(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createAddOnSchema)) body: CreateAddOnInput) {
+  createAddOn(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createAddOnSchema)) body: CreateAddOnDto) {
     return this.providersService.createAddOn(user.id, body);
   }
 
@@ -134,7 +125,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
   @ApiResponse({ status: 404, description: 'Add-on not found' })
-  updateAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string, @Body(new ZodValidationPipe(updateAddOnSchema)) body: UpdateAddOnInput) {
+  updateAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string, @Body(new ZodValidationPipe(updateAddOnSchema)) body: UpdateAddOnDto) {
     return this.providersService.updateAddOn(user.id, addOnId, body);
   }
 
@@ -166,7 +157,7 @@ export class ProvidersController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not a provider' })
-  updateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateAvailabilitySchema)) body: UpdateAvailabilityInput) {
+  updateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateAvailabilitySchema)) body: UpdateAvailabilityDto) {
     return this.providersService.updateAvailability(user.id, body);
   }
 }

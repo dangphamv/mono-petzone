@@ -7,9 +7,7 @@ import { PetsService } from './pets.service';
 import { CreatePetDto, UpdatePetDto } from './dto';
 import {
   createPetSchema,
-  type CreatePetInput,
   updatePetSchema,
-  type UpdatePetInput,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 
@@ -24,7 +22,7 @@ export class PetsController {
   @ApiResponse({ status: 201, description: 'Pet created successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPetSchema)) body: CreatePetInput) {
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPetSchema)) body: CreatePetDto) {
     return this.petsService.create(user.id, body);
   }
 
@@ -70,7 +68,7 @@ export class PetsController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Pet not found' })
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updatePetSchema)) body: UpdatePetInput) {
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updatePetSchema)) body: UpdatePetDto) {
     return this.petsService.update(user.id, id, body);
   }
 

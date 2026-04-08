@@ -53,15 +53,124 @@ Always use workspace packages — never initialize Supabase clients directly.
 | Types/Interfaces | `PascalCase` | `OrderStatus`, `ProviderResponse` |
 
 ## NestJS API Patterns
-- **Module structure**: `module.ts` → `controller.ts` → `service.ts` → (guards/pipes/dto/)
-- **Auth**: Supabase JWT verified via `SupabaseAuthGuard` (global). Use `@Public()` to skip.
-- **Roles**: `@Roles('admin')`, `@Roles('provider')` with `RolesGuard`
-- **Validation**: Use `ZodValidationPipe` with schemas from `@petzone/validators`
-- **Current user**: `@CurrentUser()` decorator injects authenticated user
-- **Swagger**: Every endpoint must have `@ApiOperation()`, `@ApiResponse()`, `@ApiTags()`. DTOs use `@ApiProperty()` with description + example. This is the mobile team's contract.
-- **Error handling**: Throw NestJS HTTP exceptions. `GlobalExceptionFilter` formats responses.
-- **Events**: Use `@nestjs/event-emitter` for cross-module events (order status changes, notifications)
-- **Prefix**: All routes prefixed with `/api` (set in main.ts)
+
+### Module Structure
+`module.ts` → `controller.ts` → `service.ts` → `dto.ts` (Swagger only)
+
+### Authentication & Authorization
+- **Auth guard**: `SupabaseAuthGuard` (global). Use `@Public()` to skip auth.
+- **JWT verification**: Local via `jose` library with fallback to Supabase `auth.getUser()`. Issuer: `${SUPABASE_URL}/auth/v1`
+- **Roles**: `@Roles('admin')`, `@Roles('provider')` with `RolesGuard`. Role stored in `auth.users.app_metadata.role` — must sync via `auth.admin.updateUserById()` when role changes.
+- **Current user**: `@CurrentUser() user: AuthUser` decorator. Type: `src/common/interfaces/auth-user.ts`
+- **Supabase client**: Use `this.supabase.client` (service role, bypasses RLS) for DB operations. Use `this.supabase.createAuthClient()` (anon key) for `signInWithPassword`/`refreshSession` — NEVER call these on the service role client (it mutates internal auth state).
+
+### Validation (CRITICAL — follow exactly)
+- **Zod schemas**: Defined in `@petzone/validators`. Every `@Body()` param MUST have a Zod validation pipe.
+- **Pipe placement**: Apply on the `@Body()` parameter, NOT with `@UsePipes()` at method level.
+  ```ts
+  // CORRECT — pipe on @Body() only
+  create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createPetSchema)) body: CreatePetInput) {}
+  
+  // WRONG — @UsePipes runs on ALL params including @CurrentUser(), breaks validation
+  @UsePipes(new ZodValidationPipe(createPetSchema))
+  create(@CurrentUser() user: AuthUser, @Body() body: CreatePetInput) {}
+  ```
+- **Query validation**: Use `ZodQueryValidationPipe` for `@Query()` params (coerces strings to numbers).
+  ```ts
+  search(@Query(new ZodQueryValidationPipe(searchSchema)) query: SearchInput) {}
+  ```
+- **Types**: Import Zod-inferred types from `@petzone/validators` for service method params. DTO classes in `dto.ts` are for Swagger only.
+
+### Database Queries
+- **Column constants**: Use constants from `src/common/constants/columns.ts` — NEVER use `select('*')`.
+  ```ts
+  import { PET_COLUMNS } from '../../common/constants/columns';
+  this.supabase.client.from('pets').select(PET_COLUMNS)
+  ```
+- **Joins**: Construct select strings for joins:
+  ```ts
+  .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`)
+  ```
+- **Supabase join types**: PostgREST joins may return arrays or objects. Handle both:
+  ```ts
+  const p = order.providers;
+  const userId = Array.isArray(p) ? p[0]?.user_id : p?.user_id;
+  ```
+
+### Pagination
+- All list endpoints MUST be paginated using `paginate()` from `src/common/utils/pagination.ts`.
+- Import `PAGINATION` from `@petzone/shared` for defaults (DEFAULT_LIMIT=20, MAX_LIMIT=100).
+  ```ts
+  // Controller
+  findAll(@CurrentUser() user: AuthUser, @Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.service.findAll(user.id, {
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
+  }
+  
+  // Service
+  async findAll(userId: string, params: PaginationParams) {
+    const { page = 1, limit = 20 } = params;
+    const from = (page - 1) * limit;
+    const { data, error, count } = await this.supabase.client
+      .from('table').select(COLUMNS, { count: 'exact' })
+      .eq('user_id', userId).range(from, from + limit - 1);
+    if (error) throw new BadRequestException(error.message);
+    return paginate(data ?? [], count ?? 0, { page, limit });
+  }
+  ```
+
+### Caching
+- Use `@nestjs/cache-manager` (globally registered). Inject: `@Inject(CACHE_MANAGER) private readonly cache: Cache`
+- Cache static/slow-changing data: breeds (24h), provider profiles (5min), admin dashboard (1min), admin config (10min)
+- Invalidate cache after mutations: `await this.cache.del(cacheKey)`
+
+### Rate Limiting
+- Global: 100 req/60s (safety net via `ThrottlerModule`)
+- Auth endpoints: `@Throttle({ default: { ttl: 60000, limit: 3-5 } })`
+- Upload endpoints: `@Throttle({ default: { ttl: 60000, limit: 10-20 } })`
+
+### Performance
+- Use `Promise.all()` for independent DB queries (e.g., parallel lookups in order creation)
+- Select only needed columns in joins — avoid `table(*)`
+- Use `{ count: 'exact', head: true }` for count-only queries (admin dashboard)
+
+### Error Handling
+- `NotFoundException` — missing resources (Supabase error code `PGRST116`)
+- `BadRequestException` — validation/business rule errors
+- `ForbiddenException` — authorization failures
+- `ConflictException` — duplicate resources (Supabase error code `23505`)
+- `UnauthorizedException` — invalid credentials/tokens
+- Helper: `throwOnSupabaseError(error, entityName)` from `src/common/utils/supabase-error.ts`
+- `GlobalExceptionFilter` formats all errors as `{ success, statusCode, message, timestamp }`
+
+### Swagger
+- Every endpoint: `@ApiOperation()`, `@ApiResponse()`, `@ApiTags()`. 
+- DTOs use `@ApiProperty()` with description + example. This is the mobile team's contract.
+- DTO classes are for Swagger documentation only — runtime validation is via Zod.
+
+### Events
+- Use `@nestjs/event-emitter` for cross-module events (order status changes, notifications)
+
+### API Prefix
+- All routes prefixed with `/api` (set in main.ts)
+
+### Key Utility Files
+| File | Purpose |
+|------|---------|
+| `src/common/interfaces/auth-user.ts` | `AuthUser` interface for `@CurrentUser()` |
+| `src/common/constants/columns.ts` | Column selection constants per entity |
+| `src/common/pipes/zod-validation.pipe.ts` | Body validation pipe (Zod) |
+| `src/common/pipes/zod-query-validation.pipe.ts` | Query param validation pipe (Zod + coercion) |
+| `src/common/utils/pagination.ts` | `paginate()`, `PaginationParams`, `PaginatedResult` |
+| `src/common/utils/supabase-error.ts` | Supabase error → NestJS exception mapper |
+| `src/common/guards/supabase-auth.guard.ts` | JWT verification (local + API fallback) |
+| `src/common/guards/roles.guard.ts` | Role-based access control |
+| `src/common/filters/http-exception.filter.ts` | Global error response formatter |
+| `src/common/decorators/public.decorator.ts` | `@Public()` — bypass auth |
+| `src/common/decorators/current-user.decorator.ts` | `@CurrentUser()` — inject AuthUser |
+| `src/common/decorators/roles.decorator.ts` | `@Roles()` — required roles |
 
 ## Supabase Patterns
 - **Migrations**: `supabase/migrations/` — timestamped SQL files
@@ -118,7 +227,6 @@ Always use workspace packages — never initialize Supabase clients directly.
 - CORS configured per environment
 
 ## Custom Skills (invoke during development)
-- `nestjs-best-practices` — architecture, DI, security, testing patterns for NestJS
 - `supabase-postgres-best-practices` — query performance, indexes, RLS, schema design
 - `brainstorming` — feature design and architectural decisions
 

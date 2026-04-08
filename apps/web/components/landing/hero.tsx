@@ -1,29 +1,77 @@
+import { ArrowRight, Sparkles, Star } from 'lucide-react'
+
 export function Hero() {
   return (
-    <section className="bg-background py-20">
-      <div className="mx-auto max-w-7xl px-4 text-center">
-        <h1 className="font-heading text-4xl font-bold leading-tight text-text md:text-6xl">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-white to-primary/5 py-28 md:py-36">
+      {/* Decorative elements */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Large gradient orb top-right */}
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-gradient-to-br from-primary/20 to-secondary/10 blur-3xl" />
+        {/* Small gradient orb bottom-left */}
+        <div className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-gradient-to-tr from-secondary/15 to-primary/10 blur-3xl" />
+        {/* Floating sparkle dots */}
+        <div className="absolute left-[15%] top-[20%] animate-sparkle">
+          <Star className="h-4 w-4 text-secondary/60" fill="currentColor" />
+        </div>
+        <div className="absolute right-[20%] top-[30%] animate-sparkle" style={{ animationDelay: '0.7s' }}>
+          <Star className="h-3 w-3 text-primary/50" fill="currentColor" />
+        </div>
+        <div className="absolute bottom-[25%] left-[25%] animate-sparkle" style={{ animationDelay: '1.4s' }}>
+          <Star className="h-3.5 w-3.5 text-secondary/40" fill="currentColor" />
+        </div>
+        <div className="absolute bottom-[35%] right-[12%] animate-sparkle" style={{ animationDelay: '0.3s' }}>
+          <Sparkles className="h-5 w-5 text-primary/30" />
+        </div>
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-6 text-center">
+        {/* Badge */}
+        <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-5 py-2 text-sm font-medium text-primary-dark">
+          <Sparkles className="h-4 w-4" />
+          Nền tảng số 1 Việt Nam
+        </div>
+
+        <h1 className="animate-slide-up font-heading text-4xl font-bold leading-tight tracking-tight text-text md:text-6xl lg:text-7xl">
           Khách sạn thú cưng
           <br />
-          <span className="text-primary">uy tín & minh bạch</span>
+          <span className="shimmer-text">uy tín & minh bạch</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-text-secondary">
+
+        <p className="mx-auto mt-8 max-w-2xl animate-fade-in text-lg leading-relaxed text-text-secondary md:text-xl">
           Tìm kiếm, đặt phòng và theo dõi thú cưng của bạn theo thời gian thực.
           An tâm khi gửi bé yêu tại các cơ sở đã được xác minh.
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
+
+        <div className="mt-12 flex animate-fade-in flex-col items-center justify-center gap-4 sm:flex-row">
           <a
             href="#download"
-            className="rounded-xl bg-primary px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-dark"
+            className="group flex cursor-pointer items-center gap-3 rounded-full bg-gradient-to-r from-primary to-primary-dark px-10 py-4 text-lg font-semibold text-white shadow-xl shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary/30"
           >
             Tải ứng dụng miễn phí
+            <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
           </a>
           <a
             href="/for-providers"
-            className="rounded-xl border border-gray-300 bg-white px-8 py-4 text-lg font-semibold text-text transition-colors hover:bg-gray-50"
+            className="gradient-border cursor-pointer rounded-full bg-white/80 px-10 py-4 text-lg font-semibold text-text backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
           >
             Trở thành đối tác
           </a>
+        </div>
+
+        {/* Trust indicators */}
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-text-secondary">
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 text-secondary" fill="currentColor" />
+              ))}
+            </div>
+            <span className="font-medium">4.8/5 đánh giá</span>
+          </div>
+          <div className="h-4 w-px bg-gray-300" />
+          <span><strong className="text-text">10,000+</strong> thú cưng đã phục vụ</span>
+          <div className="h-4 w-px bg-gray-300" />
+          <span><strong className="text-text">500+</strong> khách sạn đối tác</span>
         </div>
       </div>
     </section>

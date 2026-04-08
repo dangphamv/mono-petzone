@@ -1,27 +1,80 @@
-export function HowItWorks() {
-  const steps = [
-    { step: '1', title: 'Tìm kiếm', description: 'Nhập địa điểm, ngày và loại thú cưng để tìm khách sạn phù hợp' },
-    { step: '2', title: 'Đặt phòng', description: 'Chọn phòng, dịch vụ thêm và hoàn tất thanh toán' },
-    { step: '3', title: 'Check-in', description: 'Gửi bé yêu với ảnh check-in xác nhận tình trạng' },
-    { step: '4', title: 'Theo dõi', description: 'Nhận báo cáo hàng ngày và đón bé về khi hoàn tất' },
-  ]
+import { Search, CalendarCheck, Camera, HeartHandshake } from 'lucide-react'
 
+const steps = [
+  {
+    step: 1,
+    title: 'Tìm kiếm',
+    description: 'Nhập địa điểm, ngày và loại thú cưng để tìm khách sạn phù hợp nhất.',
+    icon: Search,
+  },
+  {
+    step: 2,
+    title: 'Đặt phòng',
+    description: 'Chọn phòng, dịch vụ thêm và hoàn tất thanh toán an toàn chỉ trong vài bước.',
+    icon: CalendarCheck,
+  },
+  {
+    step: 3,
+    title: 'Check-in',
+    description: 'Gửi bé yêu với ảnh check-in xác nhận tình trạng sức khỏe và an toàn.',
+    icon: Camera,
+  },
+  {
+    step: 4,
+    title: 'Theo dõi & đón về',
+    description: 'Nhận báo cáo hàng ngày về bé yêu và đón về khi dịch vụ hoàn tất.',
+    icon: HeartHandshake,
+  },
+]
+
+export function HowItWorks() {
   return (
-    <section className="bg-background py-20">
-      <div className="mx-auto max-w-7xl px-4">
-        <h2 className="text-center font-heading text-3xl font-bold text-text">
-          Cách hoạt động
-        </h2>
-        <div className="mt-12 grid gap-8 md:grid-cols-4">
-          {steps.map((s) => (
-            <div key={s.step} className="text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-white">
-                {s.step}
+    <section className="relative overflow-hidden bg-gradient-to-b from-background via-primary/3 to-background py-24 md:py-32">
+      {/* Subtle decorative background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+        <div className="absolute bottom-0 left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="text-sm font-semibold uppercase tracking-wider text-primary">Quy trình đơn giản</span>
+          <h2 className="mt-3 font-heading text-3xl font-bold text-text md:text-4xl lg:text-5xl">
+            Cách hoạt động
+          </h2>
+          <p className="mt-4 text-lg text-text-secondary">
+            Chỉ 4 bước để bé yêu của bạn được chăm sóc tốt nhất.
+          </p>
+        </div>
+
+        <div className="relative mt-16">
+          {/* Connecting line (desktop) */}
+          <div className="absolute left-0 right-0 top-14 hidden h-0.5 bg-gradient-to-r from-transparent via-primary/20 to-transparent lg:block" />
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {steps.map((s) => (
+              <div key={s.step} className="group relative text-center">
+                {/* Step number badge */}
+                <div className="relative mx-auto mb-6">
+                  <div className="relative z-10 mx-auto flex h-28 w-28 items-center justify-center">
+                    {/* Outer glow ring */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 transition-all duration-500 group-hover:from-primary/20 group-hover:to-secondary/20" />
+                    {/* Inner circle */}
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-dark shadow-lg shadow-primary/20 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/30">
+                      <s.icon className="h-8 w-8 text-white" strokeWidth={1.8} />
+                    </div>
+                  </div>
+                  {/* Step number */}
+                  <div className="absolute -right-1 -top-1 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-bold text-white shadow-md">
+                    {s.step}
+                  </div>
+                </div>
+
+                <h3 className="font-heading text-xl font-bold text-text">{s.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary">{s.description}</p>
               </div>
-              <h3 className="mt-4 font-heading text-lg font-semibold text-text">{s.title}</h3>
-              <p className="mt-2 text-sm text-text-secondary">{s.description}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

@@ -1,12 +1,11 @@
 import { Apple, Sparkles, Star, Play } from 'lucide-react'
+import type { Dictionary } from '@/lib/i18n/dictionaries/vi'
 
-export function Cta() {
+export function Cta({ dict }: { dict: Dictionary['cta'] }) {
   return (
     <section id="download" className="relative overflow-hidden py-24 md:py-32">
-      {/* Rich gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-dark via-primary to-primary-dark" />
 
-      {/* Decorative elements */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/5 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
@@ -24,14 +23,14 @@ export function Cta() {
       <div className="relative mx-auto max-w-4xl px-6 text-center">
         <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium text-white/90">
           <Sparkles className="h-4 w-4" />
-          Miễn phí tải và sử dụng
+          {dict.badge}
         </div>
 
         <h2 className="font-heading text-3xl font-bold text-white md:text-5xl lg:text-6xl">
-          Sẵn sàng trải nghiệm?
+          {dict.title}
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/75 md:text-xl">
-          Tải ứng dụng PetZone ngay hôm nay và tìm khách sạn thú cưng phù hợp nhất cho bé yêu của bạn.
+          {dict.subtitle}
         </p>
 
         <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -41,7 +40,7 @@ export function Cta() {
           >
             <Apple className="h-6 w-6" />
             <div className="text-left">
-              <div className="text-xs font-normal text-text-secondary">Tải về trên</div>
+              <div className="text-xs font-normal text-text-secondary">{dict.downloadOn}</div>
               <div>App Store</div>
             </div>
           </a>
@@ -51,7 +50,7 @@ export function Cta() {
           >
             <Play className="h-6 w-6" fill="currentColor" />
             <div className="text-left">
-              <div className="text-xs font-normal text-text-secondary">Tải về trên</div>
+              <div className="text-xs font-normal text-text-secondary">{dict.downloadOn}</div>
               <div>Google Play</div>
             </div>
           </a>

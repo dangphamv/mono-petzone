@@ -1,36 +1,16 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-interface CookieToSet { name: string; value: string; options: CookieOptions }
-
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   if (pathname === '/login') return NextResponse.next()
 
-  const response = NextResponse.next()
-  const supabase = createServerClient(
-    process.env['NEXT_PUBLIC_SUPABASE_URL']!,
-    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet: CookieToSet[]) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  const accessToken = request.cookies.get('access_token')?.value
 
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (!session) {
+  if (!accessToken) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  return response
+  return NextResponse.next()
 }
 
 export const config = {

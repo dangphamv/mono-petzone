@@ -123,7 +123,7 @@ export function Sidebar() {
             <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary-light">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="truncate font-medium text-white text-[13px] leading-tight">{displayName}</p>
+            <p className="truncate font-medium text-white text-[13px] leading-tight capitalize">{displayName}</p>
             <p className="truncate text-[11px] text-sidebar-muted">{displayEmail}</p>
           </div>
           <button

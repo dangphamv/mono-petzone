@@ -16,8 +16,10 @@ import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/comp
 
 type User = Record<string, unknown>
 
-const ROLE_VARIANT: Record<string, 'info' | 'default' | 'muted'> = {
-  owner: 'info', provider: 'default', admin: 'muted',
+const ROLE_CLASS: Record<string, string> = {
+  owner: 'bg-violet-50 text-violet-700',
+  provider: 'bg-cyan-50 text-cyan-700',
+  admin: 'bg-slate-100 text-slate-700',
 }
 const STATUS_VARIANT: Record<string, 'success' | 'destructive'> = {
   active: 'success', suspended: 'destructive', banned: 'destructive',
@@ -76,9 +78,8 @@ export default function UsersPage() {
       filterFn: 'multiValue' as any,
       cell: ({ row }) => {
         const role = row.original.role as string
-        const variant = ROLE_VARIANT[role] || 'info'
         const key = `role.${role}` as any
-        return <Badge variant={variant}>{t(key)}</Badge>
+        return <Badge variant="outline" className={ROLE_CLASS[role] || 'bg-violet-50 text-violet-700'}>{t(key)}</Badge>
       },
     },
     {

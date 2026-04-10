@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 
 interface CurrentUser {
   id: string
@@ -26,15 +26,19 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 export function useCurrentUser(): CurrentUser | null {
-  return useMemo(() => {
+  const [user, setUser] = useState<CurrentUser | null>(null)
+
+  useEffect(() => {
     const token = getToken()
-    if (!token) return null
+    if (!token) return
     const payload = decodeJwtPayload(token)
-    if (!payload) return null
-    return {
+    if (!payload) return
+    setUser({
       id: (payload.sub as string) || '',
       email: (payload.email as string) || '',
       role: (payload.app_metadata as Record<string, unknown>)?.role as string || 'admin',
-    }
+    })
   }, [])
+
+  return user
 }

@@ -123,7 +123,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="h-11 px-5 font-semibold" style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}>
+                  <TableHead key={header.id} className="h-11 px-5 text-left font-semibold" style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}

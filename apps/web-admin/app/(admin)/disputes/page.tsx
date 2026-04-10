@@ -17,7 +17,10 @@ import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/comp
 type Dispute = Record<string, unknown>
 
 const STATUS_VARIANT: Record<string, 'warning' | 'success'> = { open: 'warning', resolved: 'success' }
-const ROLE_VARIANT: Record<string, 'info' | 'default'> = { owner: 'info', provider: 'default' }
+const ROLE_CLASS: Record<string, string> = {
+  owner: 'bg-violet-50 text-violet-700',
+  provider: 'bg-cyan-50 text-cyan-700',
+}
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '-'
@@ -67,9 +70,8 @@ export default function DisputesPage() {
       enableSorting: false,
       cell: ({ row }) => {
         const role = row.original.opened_by_role as string
-        const variant = ROLE_VARIANT[role] || 'info'
         const key = `role.${role}` as any
-        return <Badge variant={variant}>{t(key)}</Badge>
+        return <Badge variant="outline" className={ROLE_CLASS[role] || 'bg-violet-50 text-violet-700'}>{t(key)}</Badge>
       },
     },
     {

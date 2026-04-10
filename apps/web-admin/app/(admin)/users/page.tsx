@@ -1,37 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users as UsersIcon, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useI18n } from '@/lib/i18n'
+import { Users as UsersIcon } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Button, Badge,
-  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Textarea, Label, Checkbox, Skeleton,
+  Textarea, Label, Checkbox,
 } from '@petzone/ui'
+import { useI18n } from '@/lib/i18n'
 import { useUsers, useSuspendUser } from '@/lib/hooks/use-admin'
+import { useTableParams } from '@/lib/hooks/use-table-params'
+import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
 type User = Record<string, unknown>
 
 const ROLE_VARIANT: Record<string, 'info' | 'default' | 'muted'> = {
   owner: 'info', provider: 'default', admin: 'muted',
 }
-const ROLE_KEY: Record<string, string> = {
-  owner: 'role.owner', provider: 'role.provider', admin: 'role.admin',
-}
 const STATUS_VARIANT: Record<string, 'success' | 'destructive'> = {
   active: 'success', suspended: 'destructive', banned: 'destructive',
 }
-const STATUS_KEY: Record<string, string> = {
-  active: 'status.active', suspended: 'status.suspended', banned: 'status.banned',
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export default function UsersPage() {
   const { t } = useI18n()
-  const [page, setPage] = useState(1)
-  const { data, isLoading } = useUsers(page)
   const router = useRouter()
+  const table = useTableParams()
+  const { data, isLoading } = useUsers({
+    page: table.page,
+    limit: table.pageSize,
+    search: table.debouncedSearch,
+    filters: table.filters,
+  })
   const suspend = useSuspendUser()
   const [selected, setSelected] = useState<User | null>(null)
   const [reason, setReason] = useState('')
@@ -46,9 +52,88 @@ export default function UsersPage() {
   }
   const closeDialog = () => { setSelected(null); setReason(''); setIsPermanent(false) }
 
+  const columns = useMemo<ColumnDef<User, unknown>[]>(() => [
+    {
+      accessorKey: 'full_name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('users.name')} />,
+      cell: ({ row }) => <span className="font-medium">{row.original.full_name as string}</span>,
+    },
+    {
+      accessorKey: 'email',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('users.email')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.email as string}</span>,
+    },
+    {
+      accessorKey: 'phone',
+      header: t('users.phone'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-muted-foreground">{(row.original.phone as string) || '-'}</span>,
+    },
+    {
+      accessorKey: 'role',
+      header: t('users.role'),
+      enableSorting: false,
+      filterFn: 'multiValue' as any,
+      cell: ({ row }) => {
+        const role = row.original.role as string
+        const variant = ROLE_VARIANT[role] || 'info'
+        const key = `role.${role}` as any
+        return <Badge variant={variant}>{t(key)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: t('common.status'),
+      enableSorting: false,
+      filterFn: 'multiValue' as any,
+      cell: ({ row }) => {
+        const status = row.original.status as string
+        const variant = STATUS_VARIANT[status] || 'success'
+        const key = `status.${status}` as any
+        return <Badge variant={variant}>{t(key)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('common.created_at')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.created_at as string)}</span>,
+    },
+    {
+      id: 'actions',
+      size: 100,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        if (row.original.status !== 'active') return null
+        return (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={(e) => { e.stopPropagation(); setSelected(row.original) }}
+          >
+            {t('users.suspend')}
+          </Button>
+        )
+      },
+    },
+  ], [t])
+
+  const roleOptions = useMemo(() => [
+    { label: t('role.owner'), value: 'owner' },
+    { label: t('role.provider'), value: 'provider' },
+    { label: t('role.admin'), value: 'admin' },
+  ], [t])
+
+  const statusOptions = useMemo(() => [
+    { label: t('status.active'), value: 'active' },
+    { label: t('status.suspended'), value: 'suspended' },
+    { label: t('status.banned'), value: 'banned' },
+  ], [t])
+
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-8">
         <div className="stat-icon bg-blue-50 text-blue-600"><UsersIcon size={20} /></div>
         <div>
           <h1 className="page-header">{t('users.title')}</h1>
@@ -56,70 +141,39 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="table-wrapper mt-8">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">{t('users.name')}</TableHead>
-              <TableHead className="font-semibold">{t('users.email')}</TableHead>
-              <TableHead className="font-semibold">{t('users.phone')}</TableHead>
-              <TableHead className="font-semibold">{t('users.role')}</TableHead>
-              <TableHead className="font-semibold">{t('common.status')}</TableHead>
-              <TableHead className="font-semibold">{t('common.created_at')}</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>))}</TableRow>
-              ))
-            ) : !data?.data?.length ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
-                  <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-2 text-sm text-muted-foreground">{t('users.empty')}</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((row: User) => {
-                const rv = ROLE_VARIANT[row.role as string] || ROLE_VARIANT.owner
-                const rk = ROLE_KEY[row.role as string] || ROLE_KEY.owner
-                const sv = STATUS_VARIANT[row.status as string] || STATUS_VARIANT.active
-                const sk = STATUS_KEY[row.status as string] || STATUS_KEY.active
-                return (
-                  <TableRow key={row.id as string} className="cursor-pointer transition-colors" onClick={() => router.push(`/users/${row.id}`)}>
-                    <TableCell className="font-medium">{row.full_name as string}</TableCell>
-                    <TableCell className="text-muted-foreground">{row.email as string}</TableCell>
-                    <TableCell className="text-muted-foreground">{(row.phone as string) || '-'}</TableCell>
-                    <TableCell><Badge variant={rv}>{t(rk as any)}</Badge></TableCell>
-                    <TableCell><Badge variant={sv}>{t(sk as any)}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{fmtDate(row.created_at as string)}</TableCell>
-                    <TableCell>
-                      {row.status === 'active' && (
-                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setSelected(row) }}>
-                          {t('users.suspend')}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data?.meta && data.meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{t('common.showing')} {data.data.length} / {data.meta.total}</p>
-          <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={16} /></Button>
-            <span className="min-w-[80px] text-center text-sm text-muted-foreground">{data.meta.page} / {data.meta.totalPages}</span>
-            <Button variant="outline" size="icon" disabled={page >= data.meta.totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={16} /></Button>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        totalItems={data?.meta?.total ?? 0}
+        page={table.page}
+        pageSize={table.pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        searchValue={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder={`${t('common.search')} ${t('users.name').toLowerCase()}, ${t('users.email').toLowerCase()}...`}
+        activeFilters={table.filters}
+        isLoading={isLoading}
+        emptyIcon={UsersIcon}
+        emptyMessage={t('users.empty')}
+        onRowClick={(row) => router.push(`/users/${row.id}`)}
+        toolbarContent={
+          <>
+            <DataTableFacetedFilter
+              title={t('users.role')}
+              options={roleOptions}
+              value={table.filters.role ?? []}
+              onChange={(v) => table.setFilter('role', v)}
+            />
+            <DataTableFacetedFilter
+              title={t('common.status')}
+              options={statusOptions}
+              value={table.filters.status ?? []}
+              onChange={(v) => table.setFilter('status', v)}
+            />
+          </>
+        }
+      />
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>
@@ -147,9 +201,4 @@ export default function UsersPage() {
       </Dialog>
     </div>
   )
-}
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '-'
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }

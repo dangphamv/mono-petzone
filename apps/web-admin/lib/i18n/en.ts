@@ -214,4 +214,15 @@ export const en = {
   'config.saving': 'Saving...',
   'config.saved': 'Settings saved successfully',
   'config.current': 'Current',
+
+  // DataTable
+  'table.showing_results': 'Showing {from}-{to} of {total}',
+  'table.rows_per_page': 'Rows',
+  'table.page_of': 'Page {page} / {total}',
+  'table.sort_asc': 'Sort ascending',
+  'table.sort_desc': 'Sort descending',
+  'table.hide_column': 'Hide column',
+  'table.clear_filters': 'Clear filters',
+  'table.no_results': 'No results found',
+  'table.try_different': 'Try adjusting your search or filters',
 } as const

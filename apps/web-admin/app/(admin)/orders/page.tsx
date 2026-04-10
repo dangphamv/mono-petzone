@@ -1,39 +1,117 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  Badge,
-  Button,
-  Skeleton,
-  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
-} from '@petzone/ui'
-import { useOrders } from '@/lib/hooks/use-admin'
+import { ClipboardList } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { Badge } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
+import { useOrders } from '@/lib/hooks/use-admin'
+import { useTableParams } from '@/lib/hooks/use-table-params'
+import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
 type Order = Record<string, unknown>
 
-export default function OrdersPage() {
-  const [page, setPage] = useState(1)
-  const { data, isLoading } = useOrders(page)
-  const router = useRouter()
-  const { t } = useI18n()
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+function fmtVND(n: number) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
+}
 
-  const STATUS_MAP: Record<string, { variant: 'default' | 'warning' | 'info' | 'success' | 'destructive'; label: string }> = {
-    pending: { variant: 'warning', label: t('status.pending') },
-    confirmed: { variant: 'default', label: t('status.confirmed') },
-    checked_in: { variant: 'info', label: t('status.checked_in') },
-    in_progress: { variant: 'info', label: t('status.in_progress') },
-    check_out: { variant: 'info', label: t('status.check_out') },
-    completed: { variant: 'success', label: t('status.completed') },
-    cancelled: { variant: 'destructive', label: t('status.cancelled') },
-    disputed: { variant: 'destructive', label: t('status.disputed') },
+export default function OrdersPage() {
+  const { t } = useI18n()
+  const router = useRouter()
+  const table = useTableParams()
+  const { data, isLoading } = useOrders({
+    page: table.page,
+    limit: table.pageSize,
+    search: table.debouncedSearch,
+    filters: table.filters,
+  })
+
+  const STATUS_MAP: Record<string, { variant: 'default' | 'warning' | 'info' | 'success' | 'destructive'; key: string }> = {
+    pending: { variant: 'warning', key: 'status.pending' },
+    confirmed: { variant: 'default', key: 'status.confirmed' },
+    checked_in: { variant: 'info', key: 'status.checked_in' },
+    in_progress: { variant: 'info', key: 'status.in_progress' },
+    check_out: { variant: 'info', key: 'status.check_out' },
+    completed: { variant: 'success', key: 'status.completed' },
+    cancelled: { variant: 'destructive', key: 'status.cancelled' },
+    disputed: { variant: 'destructive', key: 'status.disputed' },
   }
+
+  const columns = useMemo<ColumnDef<Order, unknown>[]>(() => [
+    {
+      accessorKey: 'order_number',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('orders.order_number')} />,
+      cell: ({ row }) => <span className="font-mono text-sm font-medium">{row.original.order_number as string}</span>,
+    },
+    {
+      id: 'provider',
+      header: t('orders.provider'),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const p = row.original.providers as Record<string, unknown> | Record<string, unknown>[] | null
+        const name = p ? (Array.isArray(p) ? p[0]?.business_name : p?.business_name) as string || '-' : '-'
+        return <span>{name}</span>
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: t('common.status'),
+      enableSorting: false,
+      filterFn: 'multiValue' as any,
+      cell: ({ row }) => {
+        const status = row.original.status as string
+        const cfg = STATUS_MAP[status] ?? { variant: 'default' as const, key: status }
+        return <Badge variant={cfg.variant}>{t(cfg.key as any)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'check_in_date',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('orders.check_in')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.check_in_date as string)}</span>,
+    },
+    {
+      accessorKey: 'check_out_date',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('orders.check_out')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.check_out_date as string)}</span>,
+    },
+    {
+      accessorKey: 'total_price',
+      header: ({ column }) => (
+        <div className="text-right">
+          <DataTableColumnHeader column={column} title={t('orders.total_price')} />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="block text-right font-medium">
+          {row.original.total_price ? fmtVND(row.original.total_price as number) : '-'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('common.created_at')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.created_at as string)}</span>,
+    },
+  ], [t])
+
+  const statusOptions = useMemo(() => [
+    { label: t('status.pending'), value: 'pending' },
+    { label: t('status.confirmed'), value: 'confirmed' },
+    { label: t('status.checked_in'), value: 'checked_in' },
+    { label: t('status.in_progress'), value: 'in_progress' },
+    { label: t('status.completed'), value: 'completed' },
+    { label: t('status.cancelled'), value: 'cancelled' },
+    { label: t('status.disputed'), value: 'disputed' },
+  ], [t])
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-8">
         <div className="stat-icon bg-violet-50 text-violet-600">
           <ClipboardList size={20} />
         </div>
@@ -43,75 +121,31 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="table-wrapper mt-8">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">{t('orders.order_number')}</TableHead>
-              <TableHead className="font-semibold">{t('orders.provider')}</TableHead>
-              <TableHead className="font-semibold">{t('common.status')}</TableHead>
-              <TableHead className="font-semibold">{t('orders.check_in')}</TableHead>
-              <TableHead className="font-semibold">{t('orders.check_out')}</TableHead>
-              <TableHead className="font-semibold text-right">{t('orders.total_price')}</TableHead>
-              <TableHead className="font-semibold">{t('common.created_at')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : !(data?.data ?? []).length ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
-                  <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-2 text-sm text-muted-foreground">{t('orders.empty')}</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              (data?.data ?? []).map((row: Order) => {
-                const p = row.providers as Record<string, unknown> | Record<string, unknown>[] | null
-                const providerName = p ? (Array.isArray(p) ? p[0]?.business_name : p?.business_name) as string || '-' : '-'
-                const cfg = STATUS_MAP[row.status as string] ?? { variant: 'default' as const, label: row.status as string }
-                return (
-                  <TableRow key={row.id as string} className="cursor-pointer transition-colors" onClick={() => router.push(`/orders/${row.id}`)}>
-                    <TableCell className="font-mono text-sm font-medium">{row.order_number as string}</TableCell>
-                    <TableCell>{providerName}</TableCell>
-                    <TableCell><Badge variant={cfg.variant}>{cfg.label}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{fmtDate(row.check_in_date as string)}</TableCell>
-                    <TableCell className="text-muted-foreground">{fmtDate(row.check_out_date as string)}</TableCell>
-                    <TableCell className="text-right font-medium">{row.total_price ? fmtVND(row.total_price as number) : '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{fmtDate(row.created_at as string)}</TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data?.meta && data.meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{t('common.showing')} {data.data.length} / {data.meta.total}</p>
-          <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={16} /></Button>
-            <span className="min-w-[80px] text-center text-sm text-muted-foreground">{data.meta.page} / {data.meta.totalPages}</span>
-            <Button variant="outline" size="icon" disabled={page >= data.meta.totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={16} /></Button>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        totalItems={data?.meta?.total ?? 0}
+        page={table.page}
+        pageSize={table.pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        searchValue={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder={`${t('common.search')} ${t('orders.order_number').toLowerCase()}...`}
+        activeFilters={table.filters}
+        isLoading={isLoading}
+        emptyIcon={ClipboardList}
+        emptyMessage={t('orders.empty')}
+        onRowClick={(row) => router.push(`/orders/${row.id}`)}
+        toolbarContent={
+          <DataTableFacetedFilter
+            title={t('common.status')}
+            options={statusOptions}
+            value={table.filters.status ?? []}
+            onChange={(v) => table.setFilter('status', v)}
+          />
+        }
+      />
     </div>
   )
-}
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '-'
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-function fmtVND(n: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 }

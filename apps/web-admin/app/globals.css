@@ -124,6 +124,58 @@
   }
 }
 
+@layer base {
+  /* Fix: Tailwind v4 doesn't scan packages/ui for utility classes.
+     Force-generate the disabled + cursor states the UI components need. */
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    height: 2.5rem; /* 40px — comfortable touch target */
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-input);
+    background-color: var(--color-card);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-ring);
+  }
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  textarea {
+    height: auto;
+    min-height: 2.5rem;
+  }
+}
+
 @layer utilities {
   .page-header {
     @apply font-heading text-2xl font-bold tracking-tight text-foreground;

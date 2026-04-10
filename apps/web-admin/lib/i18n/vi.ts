@@ -214,4 +214,15 @@ export const vi = {
   'config.saving': 'Đang lưu...',
   'config.saved': 'Cấu hình đã được lưu thành công',
   'config.current': 'Hiện tại',
+
+  // DataTable
+  'table.showing_results': 'Hiển thị {from}-{to} / {total}',
+  'table.rows_per_page': 'Dòng',
+  'table.page_of': 'Trang {page} / {total}',
+  'table.sort_asc': 'Sắp xếp tăng dần',
+  'table.sort_desc': 'Sắp xếp giảm dần',
+  'table.hide_column': 'Ẩn cột',
+  'table.clear_filters': 'Xóa bộ lọc',
+  'table.no_results': 'Không tìm thấy kết quả',
+  'table.try_different': 'Thử thay đổi từ khóa hoặc bộ lọc',
 } as const

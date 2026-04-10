@@ -8,6 +8,7 @@ import {
   Users, Star, BarChart3, Settings, LogOut, Globe,
 } from 'lucide-react'
 import { useLogout } from '@/lib/hooks/use-auth'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useI18n } from '@/lib/i18n'
 import type { TranslationKey } from '@/lib/i18n'
 
@@ -55,6 +56,14 @@ function NavSection({ items, label }: { items: typeof navItems; label: string })
 export function Sidebar() {
   const { t, locale, setLocale } = useI18n()
   const logout = useLogout()
+  const user = useCurrentUser()
+
+  const initials = user?.email
+    ? user.email.substring(0, 2).toUpperCase()
+    : 'AD'
+  const displayName = user?.email?.split('@')[0] || 'Admin'
+  const displayEmail = user?.email || 'admin@petzone.vn'
+  const displayRole = user?.role || 'admin'
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-full w-[260px] flex-col bg-sidebar">
@@ -83,7 +92,7 @@ export function Sidebar() {
       {/* Language switcher */}
       <div className="flex items-center gap-1 px-4 py-2">
         <Globe size={14} className="text-sidebar-muted" />
-        <div className="flex gap-0.5 rounded-md bg-sidebar-hover p-0.5">
+        <div className="flex gap-1 rounded-md bg-sidebar-hover p-0.5">
           <button
             onClick={() => setLocale('vi')}
             className={cn(
@@ -111,11 +120,11 @@ export function Sidebar() {
       <div className="p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
           <Avatar className="h-8 w-8 ring-2 ring-sidebar-border">
-            <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary-light">AD</AvatarFallback>
+            <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary-light">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="truncate font-medium text-white text-[13px] leading-tight">Admin</p>
-            <p className="truncate text-[11px] text-sidebar-muted">admin@petzone.vn</p>
+            <p className="truncate font-medium text-white text-[13px] leading-tight">{displayName}</p>
+            <p className="truncate text-[11px] text-sidebar-muted">{displayEmail}</p>
           </div>
           <button
             onClick={logout}

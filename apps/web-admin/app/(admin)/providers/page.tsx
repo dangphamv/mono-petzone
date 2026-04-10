@@ -1,36 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Building2 } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
-  Button,
-  Badge,
-  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+  Button, Badge,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Textarea,
-  Skeleton,
 } from '@petzone/ui'
-import { useProviders, useVerifyProvider } from '@/lib/hooks/use-admin'
 import { useI18n } from '@/lib/i18n'
+import { useProviders, useVerifyProvider } from '@/lib/hooks/use-admin'
+import { useTableParams } from '@/lib/hooks/use-table-params'
+import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
 type Provider = Record<string, unknown>
 
+const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'destructive'> = {
+  approved: 'success', rejected: 'destructive', pending: 'warning',
+}
+
 export default function ProvidersPage() {
-  const [page, setPage] = useState(1)
-  const { data, isLoading } = useProviders(page)
+  const { t } = useI18n()
   const router = useRouter()
+  const table = useTableParams()
+  const { data, isLoading } = useProviders({
+    page: table.page,
+    limit: table.pageSize,
+    search: table.debouncedSearch,
+    filters: table.filters,
+  })
   const verify = useVerifyProvider()
   const [selected, setSelected] = useState<Provider | null>(null)
   const [action, setAction] = useState<'approved' | 'rejected' | null>(null)
   const [notes, setNotes] = useState('')
-  const { t } = useI18n()
-
-  const statusConfig: Record<string, { variant: 'success' | 'warning' | 'destructive'; label: string }> = {
-    approved: { variant: 'success', label: t('status.approved') },
-    rejected: { variant: 'destructive', label: t('status.rejected') },
-    pending: { variant: 'warning', label: t('status.pending') },
-  }
 
   const handleVerify = () => {
     if (!selected || !action) return
@@ -39,12 +42,92 @@ export default function ProvidersPage() {
       { onSuccess: () => { setSelected(null); setAction(null); setNotes('') } },
     )
   }
-
   const closeDialog = () => { setAction(null); setSelected(null); setNotes('') }
+
+  const columns = useMemo<ColumnDef<Provider, unknown>[]>(() => [
+    {
+      accessorKey: 'business_name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('providers.business_name')} />,
+      cell: ({ row }) => <span className="font-medium">{row.original.business_name as string}</span>,
+    },
+    {
+      id: 'owner',
+      header: t('providers.owner'),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const u = row.original.users as Record<string, unknown> | Record<string, unknown>[] | null
+        const user = u ? (Array.isArray(u) ? u[0] : u) : null
+        const name = (user?.full_name as string) || (user?.email as string) || '-'
+        return <span className="text-muted-foreground">{name}</span>
+      },
+    },
+    {
+      accessorKey: 'address',
+      header: t('providers.address'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="block max-w-[200px] truncate text-muted-foreground">
+          {(row.original.address as string) || '-'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'verification_status',
+      header: t('common.status'),
+      enableSorting: false,
+      filterFn: 'multiValue' as any,
+      cell: ({ row }) => {
+        const status = row.original.verification_status as string
+        const variant = STATUS_VARIANT[status] || 'warning'
+        const key = `status.${status}` as any
+        return <Badge variant={variant}>{t(key)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'rating_average',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('providers.rating')} />,
+      cell: ({ row }) => {
+        if (!row.original.rating_average) return <span className="text-muted-foreground">-</span>
+        return (
+          <span className="inline-flex items-center gap-1 text-sm">
+            <span className="text-amber-500">★</span>
+            {Number(row.original.rating_average).toFixed(1)}
+            <span className="text-muted-foreground">({row.original.rating_count as number})</span>
+          </span>
+        )
+      },
+    },
+    {
+      id: 'actions',
+      size: 160,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const status = row.original.verification_status as string
+        if (status !== 'pending') return null
+        return (
+          <div className="flex gap-1.5">
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row.original); setAction('approved') }}>
+              {t('providers.approve')}
+            </Button>
+            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setSelected(row.original); setAction('rejected') }}>
+              {t('providers.reject')}
+            </Button>
+          </div>
+        )
+      },
+    },
+  ], [t])
+
+  const statusOptions = useMemo(() => [
+    { label: t('status.pending'), value: 'pending' },
+    { label: t('status.approved'), value: 'approved' },
+    { label: t('status.rejected'), value: 'rejected' },
+  ], [t])
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-8">
         <div className="stat-icon bg-teal-50 text-teal-600">
           <Building2 size={20} />
         </div>
@@ -54,103 +137,31 @@ export default function ProvidersPage() {
         </div>
       </div>
 
-      <div className="table-wrapper mt-8">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">{t('providers.business_name')}</TableHead>
-              <TableHead className="font-semibold">{t('providers.owner')}</TableHead>
-              <TableHead className="font-semibold">{t('providers.address')}</TableHead>
-              <TableHead className="font-semibold">{t('common.status')}</TableHead>
-              <TableHead className="font-semibold">{t('providers.rating')}</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : !data?.data?.length ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-16 text-center">
-                  <Building2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-2 text-sm text-muted-foreground">{t('providers.empty')}</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.data.map((row: Provider) => {
-                const u = row.users as Record<string, unknown> | Record<string, unknown>[] | null
-                const user = u ? (Array.isArray(u) ? u[0] : u) : null
-                const ownerName = (user?.full_name as string) || (user?.email as string) || '-'
-                const status = row.verification_status as string
-                const cfg = statusConfig[status] || statusConfig.pending
-
-                return (
-                  <TableRow
-                    key={row.id as string}
-                    className="cursor-pointer transition-colors"
-                    onClick={() => router.push(`/providers/${row.id}`)}
-                  >
-                    <TableCell className="font-medium">{row.business_name as string}</TableCell>
-                    <TableCell className="text-muted-foreground">{ownerName}</TableCell>
-                    <TableCell className="max-w-[200px] truncate text-muted-foreground">{(row.address as string) || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={cfg.variant}>{cfg.label}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.rating_average ? (
-                        <span className="inline-flex items-center gap-1 text-sm">
-                          <span className="text-amber-500">★</span>
-                          {Number(row.rating_average).toFixed(1)}
-                          <span className="text-muted-foreground">({row.rating_count as number})</span>
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {status === 'pending' && (
-                        <div className="flex gap-1.5">
-                          <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row); setAction('approved') }}>
-                            {t('providers.approve')}
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setSelected(row); setAction('rejected') }}>
-                            {t('providers.reject')}
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data?.meta && data.meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {t('common.showing')} {data.data.length} / {data.meta.total}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-              <ChevronLeft size={16} />
-            </Button>
-            <span className="min-w-[80px] text-center text-sm text-muted-foreground">
-              {data.meta.page} / {data.meta.totalPages}
-            </span>
-            <Button variant="outline" size="icon" disabled={page >= data.meta.totalPages} onClick={() => setPage(p => p + 1)}>
-              <ChevronRight size={16} />
-            </Button>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        totalItems={data?.meta?.total ?? 0}
+        page={table.page}
+        pageSize={table.pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        searchValue={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder={`${t('common.search')} ${t('providers.business_name').toLowerCase()}...`}
+        activeFilters={table.filters}
+        isLoading={isLoading}
+        emptyIcon={Building2}
+        emptyMessage={t('providers.empty')}
+        onRowClick={(row) => router.push(`/providers/${row.id}`)}
+        toolbarContent={
+          <DataTableFacetedFilter
+            title={t('common.status')}
+            options={statusOptions}
+            value={table.filters.verification_status ?? []}
+            onChange={(v) => table.setFilter('verification_status', v)}
+          />
+        }
+      />
 
       <Dialog open={action !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>

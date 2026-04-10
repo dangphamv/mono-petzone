@@ -28,6 +28,27 @@ interface ConfigData {
   payment_timeout_hours: number
 }
 
+export interface TableQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  filters?: Record<string, string[]>
+}
+
+function buildQuery(base: string, params: TableQueryParams = {}): string {
+  const { page = 1, limit = 20, search, filters } = params
+  const qs = new URLSearchParams()
+  qs.set('page', String(page))
+  qs.set('limit', String(limit))
+  if (search) qs.set('search', search)
+  if (filters) {
+    Object.entries(filters).forEach(([key, values]) => {
+      if (values.length) qs.set(key, values.join(','))
+    })
+  }
+  return `${base}?${qs.toString()}`
+}
+
 export function useDashboard() {
   return useQuery<DashboardData>({
     queryKey: ['admin', 'dashboard'],
@@ -35,10 +56,10 @@ export function useDashboard() {
   })
 }
 
-export function useProviders(page = 1) {
+export function useProviders(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'providers', page],
-    queryFn: () => api(`/admin/providers?page=${page}&limit=20`),
+    queryKey: ['admin', 'providers', params],
+    queryFn: () => api(buildQuery('/admin/providers', params)),
   })
 }
 
@@ -54,17 +75,17 @@ export function useVerifyProvider() {
   })
 }
 
-export function useOrders(page = 1) {
+export function useOrders(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'orders', page],
-    queryFn: () => api(`/admin/orders?page=${page}&limit=20`),
+    queryKey: ['admin', 'orders', params],
+    queryFn: () => api(buildQuery('/admin/orders', params)),
   })
 }
 
-export function useDisputes(page = 1) {
+export function useDisputes(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'disputes', page],
-    queryFn: () => api(`/admin/disputes?page=${page}&limit=20`),
+    queryKey: ['admin', 'disputes', params],
+    queryFn: () => api(buildQuery('/admin/disputes', params)),
   })
 }
 
@@ -80,10 +101,10 @@ export function useResolveDispute() {
   })
 }
 
-export function useUsers(page = 1) {
+export function useUsers(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'users', page],
-    queryFn: () => api(`/admin/users?page=${page}&limit=20`),
+    queryKey: ['admin', 'users', params],
+    queryFn: () => api(buildQuery('/admin/users', params)),
   })
 }
 
@@ -96,10 +117,10 @@ export function useSuspendUser() {
   })
 }
 
-export function useReviews(page = 1) {
+export function useReviews(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'reviews', page],
-    queryFn: () => api(`/admin/reviews/flagged?page=${page}&limit=20`),
+    queryKey: ['admin', 'reviews', params],
+    queryFn: () => api(buildQuery('/admin/reviews/flagged', params)),
   })
 }
 

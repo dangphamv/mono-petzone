@@ -1,34 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useI18n } from '@/lib/i18n'
+import { AlertTriangle } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
-  Badge, Button,
+  Badge, Button, Input,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Input, Skeleton,
-  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
   Textarea, Label,
 } from '@petzone/ui'
+import { useI18n } from '@/lib/i18n'
 import { useDisputes, useResolveDispute } from '@/lib/hooks/use-admin'
+import { useTableParams } from '@/lib/hooks/use-table-params'
+import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
 type Dispute = Record<string, unknown>
 
-const CFG_VARIANT: Record<string, 'warning' | 'success' | 'info' | 'default'> = {
-  open: 'warning', resolved: 'success',
-  owner: 'info', provider: 'default',
-}
-const CFG_KEY: Record<string, string> = {
-  open: 'status.open', resolved: 'status.resolved',
-  owner: 'role.owner', provider: 'role.provider',
+const STATUS_VARIANT: Record<string, 'warning' | 'success'> = { open: 'warning', resolved: 'success' }
+const ROLE_VARIANT: Record<string, 'info' | 'default'> = { owner: 'info', provider: 'default' }
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export default function DisputesPage() {
   const { t } = useI18n()
-  const [page, setPage] = useState(1)
-  const { data, isLoading } = useDisputes(page)
   const router = useRouter()
+  const table = useTableParams()
+  const { data, isLoading } = useDisputes({
+    page: table.page,
+    limit: table.pageSize,
+    search: table.debouncedSearch,
+    filters: table.filters,
+  })
   const resolve = useResolveDispute()
   const [selected, setSelected] = useState<Dispute | null>(null)
   const [resolution, setResolution] = useState('')
@@ -43,9 +48,81 @@ export default function DisputesPage() {
   }
   const closeModal = () => { setSelected(null); setResolution(''); setRefundAmount('') }
 
+  const columns = useMemo<ColumnDef<Dispute, unknown>[]>(() => [
+    {
+      accessorKey: 'id',
+      header: t('disputes.id'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{(row.original.id as string).slice(0, 8)}...</span>,
+    },
+    {
+      accessorKey: 'order_id',
+      header: t('disputes.order'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{(row.original.order_id as string)?.slice(0, 8)}...</span>,
+    },
+    {
+      accessorKey: 'opened_by_role',
+      header: t('disputes.opened_by'),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const role = row.original.opened_by_role as string
+        const variant = ROLE_VARIANT[role] || 'info'
+        const key = `role.${role}` as any
+        return <Badge variant={variant}>{t(key)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'description',
+      header: t('common.description'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="block max-w-[250px] truncate text-muted-foreground">
+          {(row.original.description as string) || '-'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: t('common.status'),
+      enableSorting: false,
+      filterFn: 'multiValue' as any,
+      cell: ({ row }) => {
+        const status = row.original.status as string
+        const variant = STATUS_VARIANT[status] || 'warning'
+        const key = `status.${status}` as any
+        return <Badge variant={variant}>{t(key)}</Badge>
+      },
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('common.created_at')} />,
+      cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.created_at as string)}</span>,
+    },
+    {
+      id: 'actions',
+      size: 100,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        if (row.original.status !== 'open') return null
+        return (
+          <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row.original) }}>
+            {t('disputes.resolve')}
+          </Button>
+        )
+      },
+    },
+  ], [t])
+
+  const statusOptions = useMemo(() => [
+    { label: t('status.open'), value: 'open' },
+    { label: t('status.resolved'), value: 'resolved' },
+  ], [t])
+
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-8">
         <div className="stat-icon bg-red-50 text-red-600"><AlertTriangle size={20} /></div>
         <div>
           <h1 className="page-header">{t('disputes.title')}</h1>
@@ -53,68 +130,31 @@ export default function DisputesPage() {
         </div>
       </div>
 
-      <div className="table-wrapper mt-8">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">{t('disputes.id')}</TableHead>
-              <TableHead className="font-semibold">{t('disputes.order')}</TableHead>
-              <TableHead className="font-semibold">{t('disputes.opened_by')}</TableHead>
-              <TableHead className="font-semibold">{t('common.description')}</TableHead>
-              <TableHead className="font-semibold">{t('common.status')}</TableHead>
-              <TableHead className="font-semibold">{t('common.created_at')}</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>))}</TableRow>
-              ))
-            ) : !(data?.data ?? []).length ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
-                  <AlertTriangle className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-2 text-sm text-muted-foreground">{t('disputes.empty')}</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              (data?.data ?? []).map((row: Dispute) => {
-                const sv = CFG_VARIANT[row.status as string] || CFG_VARIANT.open
-                const sk = CFG_KEY[row.status as string] || CFG_KEY.open
-                const rv = CFG_VARIANT[row.opened_by_role as string] || CFG_VARIANT.owner
-                const rk = CFG_KEY[row.opened_by_role as string] || CFG_KEY.owner
-                return (
-                  <TableRow key={row.id as string} className="cursor-pointer transition-colors" onClick={() => router.push(`/disputes/${row.id}`)}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{(row.id as string).slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{(row.order_id as string)?.slice(0, 8)}...</TableCell>
-                    <TableCell><Badge variant={rv}>{t(rk as any)}</Badge></TableCell>
-                    <TableCell className="max-w-[250px] truncate text-muted-foreground">{(row.description as string) || '-'}</TableCell>
-                    <TableCell><Badge variant={sv}>{t(sk as any)}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{fmtDate(row.created_at as string)}</TableCell>
-                    <TableCell>
-                      {row.status === 'open' && (
-                        <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row) }}>{t('disputes.resolve')}</Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data?.meta && data.meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{t('common.showing')} {data.data.length} / {data.meta.total}</p>
-          <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={16} /></Button>
-            <span className="min-w-[80px] text-center text-sm text-muted-foreground">{data.meta.page} / {data.meta.totalPages}</span>
-            <Button variant="outline" size="icon" disabled={page >= data.meta.totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={16} /></Button>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={data?.data ?? []}
+        totalItems={data?.meta?.total ?? 0}
+        page={table.page}
+        pageSize={table.pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        searchValue={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder={`${t('common.search')} ID, ${t('disputes.order').toLowerCase()}...`}
+        activeFilters={table.filters}
+        isLoading={isLoading}
+        emptyIcon={AlertTriangle}
+        emptyMessage={t('disputes.empty')}
+        onRowClick={(row) => router.push(`/disputes/${row.id}`)}
+        toolbarContent={
+          <DataTableFacetedFilter
+            title={t('common.status')}
+            options={statusOptions}
+            value={table.filters.status ?? []}
+            onChange={(v) => table.setFilter('status', v)}
+          />
+        }
+      />
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) closeModal() }}>
         <DialogContent>
@@ -142,9 +182,4 @@ export default function DisputesPage() {
       </Dialog>
     </div>
   )
-}
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '-'
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }

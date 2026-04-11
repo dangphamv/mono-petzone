@@ -12,7 +12,6 @@ import type {
   SendOtpInput,
   VerifyOtpInput,
   LoginInput,
-  RegisterInput,
   GoogleAuthInput,
   RefreshTokenInput,
   SelectRoleInput,
@@ -25,10 +24,11 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async sendOtp(userId: string, body: SendOtpInput) {
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+  async sendOtp(body: SendOtpInput) {
+    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
+    const otp = isDev ? '123456' : String(Math.floor(100000 + Math.random() * 900000));
     const otpHash = createHash('sha256').update(otp).digest('hex');
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString();
 
     const { error } = await this.supabase.client
       .from('otp_verifications')
@@ -40,61 +40,121 @@ export class AuthService {
 
     if (error) throw new BadRequestException(error.message);
 
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
     return {
       message: 'OTP sent',
       ...(isDev && { otp }),
     };
   }
 
-  async verifyOtp(userId: string, body: VerifyOtpInput) {
-    const { data: otpRecord, error: otpError } = await this.supabase.client
-      .from('otp_verifications')
-      .select(OTP_COLUMNS)
-      .eq('phone', body.phone)
-      .eq('is_used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+  async verifyOtp(body: VerifyOtpInput) {
+    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
 
-    if (otpError || !otpRecord) throw new BadRequestException('No valid OTP found');
+    if (isDev && body.otp === '123456') {
+      // Dev shortcut — skip OTP record validation
+    } else {
+      const { data: otpRecord, error: otpError } = await this.supabase.client
+        .from('otp_verifications')
+        .select(OTP_COLUMNS)
+        .eq('phone', body.phone)
+        .eq('is_used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    if (new Date(otpRecord.expires_at) < new Date()) {
-      throw new BadRequestException('OTP expired');
-    }
+      if (otpError || !otpRecord) throw new BadRequestException('No valid OTP found');
 
-    if (otpRecord.attempts >= otpRecord.max_attempts) {
-      throw new BadRequestException('Too many attempts');
-    }
+      if (new Date(otpRecord.expires_at) < new Date()) {
+        throw new BadRequestException('OTP expired');
+      }
 
-    if (otpRecord.locked_until && new Date(otpRecord.locked_until) > new Date()) {
-      throw new BadRequestException('OTP verification locked, try again later');
-    }
+      if (otpRecord.locked_until && new Date(otpRecord.locked_until) > new Date()) {
+        throw new BadRequestException('OTP verification locked, try again later');
+      }
 
-    const incomingHash = createHash('sha256').update(body.otp).digest('hex');
-    if (incomingHash !== otpRecord.otp_hash) {
+      if (otpRecord.attempts >= otpRecord.max_attempts) {
+        await this.supabase.client
+          .from('otp_verifications')
+          .update({ locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() })
+          .eq('id', otpRecord.id);
+        throw new BadRequestException('Too many attempts, locked for 15 minutes');
+      }
+
+      const incomingHash = createHash('sha256').update(body.otp).digest('hex');
+      if (incomingHash !== otpRecord.otp_hash) {
+        await this.supabase.client
+          .from('otp_verifications')
+          .update({ attempts: otpRecord.attempts + 1 })
+          .eq('id', otpRecord.id);
+        throw new BadRequestException('Invalid OTP');
+      }
+
       await this.supabase.client
         .from('otp_verifications')
-        .update({ attempts: otpRecord.attempts + 1 })
+        .update({ is_used: true })
         .eq('id', otpRecord.id);
-      throw new BadRequestException('Invalid OTP');
     }
 
-    await this.supabase.client
-      .from('otp_verifications')
-      .update({ is_used: true })
-      .eq('id', otpRecord.id);
-
-    const { data: user, error: updateError } = await this.supabase.client
+    // Check if user with this phone already exists
+    const { data: existingUser } = await this.supabase.client
       .from('users')
-      .update({ phone: body.phone, updated_at: new Date().toISOString() })
-      .eq('id', userId)
+      .select(USER_COLUMNS)
+      .eq('phone', body.phone)
+      .single();
+
+    if (existingUser) {
+      // Existing user — sign in
+      const derivedPassword = this.deriveOtpPassword(body.phone);
+      const { data: session, error: signInError } = await this.supabase.createAuthClient()
+        .auth.signInWithPassword({ phone: body.phone, password: derivedPassword });
+
+      if (signInError) throw new BadRequestException(signInError.message);
+
+      await this.supabase.client
+        .from('users')
+        .update({ last_login_at: new Date().toISOString() })
+        .eq('id', existingUser.id);
+
+      return {
+        access_token: session.session!.access_token,
+        refresh_token: session.session!.refresh_token,
+        user: existingUser,
+        is_new_user: false,
+      };
+    }
+
+    // New user — create account
+    const derivedPassword = this.deriveOtpPassword(body.phone);
+    const { data: authData, error: authError } = await this.supabase.client.auth.admin
+      .createUser({
+        phone: body.phone,
+        password: derivedPassword,
+        phone_confirm: true,
+      });
+
+    if (authError) throw new BadRequestException(authError.message);
+
+    const { data: user, error: insertError } = await this.supabase.client
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        phone: body.phone,
+      })
       .select(USER_COLUMNS)
       .single();
 
-    if (updateError) throw new BadRequestException(updateError.message);
+    if (insertError) throw new BadRequestException(insertError.message);
 
-    return { message: 'Phone verified', user };
+    const { data: session, error: sessionError } = await this.supabase.createAuthClient()
+      .auth.signInWithPassword({ phone: body.phone, password: derivedPassword });
+
+    if (sessionError) throw new BadRequestException(sessionError.message);
+
+    return {
+      access_token: session.session!.access_token,
+      refresh_token: session.session!.refresh_token,
+      user,
+      is_new_user: true,
+    };
   }
 
   async login(body: LoginInput) {
@@ -123,70 +183,6 @@ export class AuthService {
     };
   }
 
-  async register(body: RegisterInput) {
-    let authUserId: string;
-
-    const { data: authData, error: authError } = await this.supabase.client.auth.admin
-      .createUser({
-        email: body.email,
-        password: body.password,
-        email_confirm: true,
-        app_metadata: { role: 'owner' },
-      });
-
-    if (authError) {
-      if (!authError.message?.toLowerCase().includes('already')) {
-        throw new BadRequestException(authError.message);
-      }
-
-      // Auth user exists -- check if public.users row exists too
-      const { data: existingUser } = await this.supabase.client
-        .from('users')
-        .select('id')
-        .eq('email', body.email)
-        .single();
-
-      if (existingUser) {
-        throw new ConflictException('Email already registered');
-      }
-
-      // Orphaned auth user (no public.users row) -- recover by updating password
-      const listResult = await this.supabase.client.auth.admin.listUsers();
-      const orphan = listResult.data.users.find((u: { email?: string }) => u.email === body.email);
-      if (!orphan) throw new ConflictException('Email already registered');
-
-      await this.supabase.client.auth.admin.updateUserById(orphan.id, { password: body.password });
-      authUserId = orphan.id;
-    } else {
-      authUserId = authData.user.id;
-    }
-
-    const { data: user, error: insertError } = await this.supabase.client
-      .from('users')
-      .insert({
-        id: authUserId,
-        email: body.email,
-        full_name: body.full_name,
-        phone: body.phone ?? null,
-        role: 'owner',
-      })
-      .select(USER_COLUMNS)
-      .single();
-
-    if (insertError) throw new BadRequestException(insertError.message);
-
-    const { data: session, error: sessionError } = await this.supabase.createAuthClient().auth
-      .signInWithPassword({ email: body.email, password: body.password });
-
-    if (sessionError) throw new BadRequestException(sessionError.message);
-
-    return {
-      access_token: session!.session!.access_token,
-      refresh_token: session!.session!.refresh_token,
-      user,
-    };
-  }
-
   async google(body: GoogleAuthInput) {
     const { data, error } = await this.supabase.createAuthClient().auth.signInWithIdToken({
       provider: 'google',
@@ -203,40 +199,43 @@ export class AuthService {
       .eq('id', authUser.id)
       .single();
 
-    let user = existingUser;
-    if (!existingUser) {
-      const { data: newUser, error: insertError } = await this.supabase.client
-        .from('users')
-        .insert({
-          id: authUser.id,
-          email: authUser.email,
-          full_name: authUser.user_metadata?.full_name ?? authUser.email,
-          avatar_url: authUser.user_metadata?.avatar_url ?? null,
-          social_provider: 'google',
-          social_id: authUser.user_metadata?.sub ?? null,
-          role: 'owner',
-        })
-        .select(USER_COLUMNS)
-        .single();
-      if (insertError) throw new BadRequestException(insertError.message);
-      user = newUser;
-    } else {
-      const { data: updated } = await this.supabase.client
+    if (existingUser) {
+      await this.supabase.client
         .from('users')
         .update({
           last_login_at: new Date().toISOString(),
           social_provider: 'google',
         })
-        .eq('id', authUser.id)
-        .select(USER_COLUMNS)
-        .single();
-      user = updated;
+        .eq('id', authUser.id);
+
+      return {
+        access_token: data.session!.access_token,
+        refresh_token: data.session!.refresh_token,
+        user: existingUser,
+        is_new_user: false,
+      };
     }
+
+    const { data: newUser, error: insertError } = await this.supabase.client
+      .from('users')
+      .insert({
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.user_metadata?.full_name ?? null,
+        avatar_url: authUser.user_metadata?.avatar_url ?? null,
+        social_provider: 'google',
+        social_id: authUser.user_metadata?.sub ?? null,
+      })
+      .select(USER_COLUMNS)
+      .single();
+
+    if (insertError) throw new BadRequestException(insertError.message);
 
     return {
       access_token: data.session!.access_token,
       refresh_token: data.session!.refresh_token,
-      user,
+      user: newUser,
+      is_new_user: true,
     };
   }
 
@@ -254,6 +253,16 @@ export class AuthService {
   }
 
   async selectRole(userId: string, body: SelectRoleInput) {
+    const { data: existing } = await this.supabase.client
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (existing?.role) {
+      throw new ConflictException('Role already selected and cannot be changed');
+    }
+
     const { data, error } = await this.supabase.client
       .from('users')
       .update({ role: body.role, updated_at: new Date().toISOString() })

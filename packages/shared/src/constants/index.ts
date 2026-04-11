@@ -88,7 +88,6 @@ export const API_ENDPOINTS = {
   AUTH_SEND_OTP: '/auth/send-otp',
   AUTH_VERIFY_OTP: '/auth/verify-otp',
   AUTH_LOGIN: '/auth/login',
-  AUTH_REGISTER: '/auth/register',
   AUTH_GOOGLE: '/auth/google',
   AUTH_REFRESH: '/auth/refresh',
   AUTH_SELECT_ROLE: '/auth/select-role',

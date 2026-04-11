@@ -21,20 +21,6 @@ export class LoginDto {
   password: string;
 }
 
-export class RegisterDto {
-  @ApiProperty({ example: 'user@example.com', description: 'Email address', format: 'email' })
-  email: string;
-
-  @ApiProperty({ example: 'password123', description: 'Password', minLength: 8 })
-  password: string;
-
-  @ApiProperty({ example: 'Nguyễn Văn A', description: 'Full name', minLength: 2, maxLength: 100 })
-  full_name: string;
-
-  @ApiPropertyOptional({ example: '+84901234567', description: 'Phone number', pattern: '^(\\+84|0)\\d{9,10}$' })
-  phone?: string;
-}
-
 export class GoogleAuthDto {
   @ApiProperty({ example: 'eyJhbGciOiJSUzI1NiIs...', description: 'Google ID token' })
   id_token: string;
@@ -44,8 +30,8 @@ export class GoogleAuthDto {
 }
 
 export class SelectRoleDto {
-  @ApiProperty({ example: 'owner', description: 'User role', enum: ['owner', 'provider', 'admin'] })
-  role: 'owner' | 'provider' | 'admin';
+  @ApiProperty({ example: 'owner', description: 'User role (one-time selection)', enum: ['owner', 'provider'] })
+  role: 'owner' | 'provider';
 }
 
 export class RefreshTokenDto {

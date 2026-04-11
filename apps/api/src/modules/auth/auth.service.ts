@@ -25,13 +25,18 @@ export class AuthService {
   ) {}
 
   private normalizePhone(phone: string): string {
-    // +84342232085 → 0342232085
-    return phone.startsWith('+84') ? '0' + phone.slice(3) : phone;
+    // +84342232085 or 84342232085 → 0342232085
+    if (phone.startsWith('+84')) return '0' + phone.slice(3);
+    if (phone.startsWith('84') && phone.length === 11) return '0' + phone.slice(2);
+    return phone;
   }
 
   private toE164(phone: string): string {
-    // 0342232085 → +84342232085
-    return phone.startsWith('0') ? '+84' + phone.slice(1) : phone;
+    // 0342232085 or 84342232085 → +84342232085
+    if (phone.startsWith('+84')) return phone;
+    if (phone.startsWith('84') && phone.length === 11) return '+' + phone;
+    if (phone.startsWith('0')) return '+84' + phone.slice(1);
+    return phone;
   }
 
   private phoneToEmail(phone: string): string {
@@ -168,6 +173,7 @@ export class AuthService {
     }
 
     // New user — create account using derived email (no Supabase phone auth needed)
+    let authUserId: string;
     const { data: authData, error: authError } = await this.supabase.client.auth.admin
       .createUser({
         email: derivedEmail,
@@ -177,12 +183,41 @@ export class AuthService {
         phone_confirm: true,
       });
 
-    if (authError) throw new BadRequestException(authError.message);
+    if (authError) {
+      if (!authError.message?.toLowerCase().includes('already')) {
+        throw new BadRequestException(authError.message);
+      }
+      // Orphaned auth user (exists in auth.users but not in public.users) — recover
+      let orphan: { id: string; phone?: string; email?: string } | undefined;
+      let page = 1;
+      while (!orphan) {
+        const { data: list } = await this.supabase.client.auth.admin.listUsers({ page, perPage: 100 });
+        if (!list?.users?.length) break;
+        orphan = list.users.find((u: { phone?: string; email?: string }) => {
+          const uNorm = u.phone ? this.normalizePhone(u.phone) : '';
+          return uNorm === local || u.phone === e164 || u.email === derivedEmail;
+        });
+        if (list.users.length < 100) break;
+        page++;
+      }
+      if (!orphan) throw new BadRequestException(authError.message);
+
+      await this.supabase.client.auth.admin.updateUserById(orphan.id, {
+        email: derivedEmail,
+        password: derivedPassword,
+        email_confirm: true,
+        phone: e164,
+        phone_confirm: true,
+      });
+      authUserId = orphan.id;
+    } else {
+      authUserId = authData.user.id;
+    }
 
     const { data: user, error: insertError } = await this.supabase.client
       .from('users')
       .insert({
-        id: authData.user.id,
+        id: authUserId,
         phone: e164,
       })
       .select(USER_COLUMNS)

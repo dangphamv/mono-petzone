@@ -114,19 +114,43 @@ export class AuthService {
         .eq('id', otpRecord.id);
     }
 
-    // Check if user with this phone already exists
+    const e164 = this.toE164(body.phone);
+    const local = this.normalizePhone(body.phone);
+    const derivedEmail = this.phoneToEmail(body.phone);
+    const derivedPassword = this.deriveOtpPassword(body.phone);
+
+    // Check if user with this phone already exists (try both formats)
     const { data: existingUser } = await this.supabase.client
       .from('users')
       .select(USER_COLUMNS)
-      .eq('phone', body.phone)
+      .or(`phone.eq.${e164},phone.eq.${local}`)
+      .limit(1)
       .single();
 
     if (existingUser) {
-      // Existing user — sign in
-      const derivedEmail = this.phoneToEmail(body.phone);
-      const derivedPassword = this.deriveOtpPassword(body.phone);
+      // Existing user — OTP login
+      // Get auth user to find their email, set derived password for session
+      const { data: { user: authUser } } = await this.supabase.client.auth.admin
+        .getUserById(existingUser.id);
+      const authEmail = authUser?.email;
+
+      if (!authEmail) {
+        // No email on auth user — set derived email + password
+        await this.supabase.client.auth.admin.updateUserById(existingUser.id, {
+          email: derivedEmail,
+          email_confirm: true,
+          password: derivedPassword,
+        });
+      } else {
+        // Has email — just update password for session creation
+        await this.supabase.client.auth.admin.updateUserById(existingUser.id, {
+          password: derivedPassword,
+        });
+      }
+
+      const signInEmail = authEmail || derivedEmail;
       const { data: session, error: signInError } = await this.supabase.createAuthClient()
-        .auth.signInWithPassword({ email: derivedEmail, password: derivedPassword });
+        .auth.signInWithPassword({ email: signInEmail, password: derivedPassword });
 
       if (signInError) throw new BadRequestException(signInError.message);
 
@@ -144,9 +168,6 @@ export class AuthService {
     }
 
     // New user — create account using derived email (no Supabase phone auth needed)
-    const e164 = this.toE164(body.phone);
-    const derivedEmail = this.phoneToEmail(body.phone);
-    const derivedPassword = this.deriveOtpPassword(body.phone);
     const { data: authData, error: authError } = await this.supabase.client.auth.admin
       .createUser({
         email: derivedEmail,

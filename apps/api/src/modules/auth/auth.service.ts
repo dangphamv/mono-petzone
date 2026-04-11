@@ -24,9 +24,26 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  private normalizePhone(phone: string): string {
+    // +84342232085 → 0342232085
+    return phone.startsWith('+84') ? '0' + phone.slice(3) : phone;
+  }
+
+  private toE164(phone: string): string {
+    // 0342232085 → +84342232085
+    return phone.startsWith('0') ? '+84' + phone.slice(1) : phone;
+  }
+
+  private phoneToEmail(phone: string): string {
+    // Use a derived email for Supabase auth (avoids needing phone auth enabled)
+    const normalized = this.normalizePhone(phone).replace(/\+/g, '');
+    return `${normalized}@phone.petzone.local`;
+  }
+
   private isTestPhone(phone: string): boolean {
     const list = this.config.get<string>('TEST_PHONE_NUMBERS') || '';
-    return list.split(',').map((n) => n.trim()).filter(Boolean).includes(phone);
+    const normalized = this.normalizePhone(phone);
+    return list.split(',').map((n) => this.normalizePhone(n.trim())).filter(Boolean).includes(normalized);
   }
 
   async sendOtp(body: SendOtpInput) {
@@ -106,9 +123,10 @@ export class AuthService {
 
     if (existingUser) {
       // Existing user — sign in
+      const derivedEmail = this.phoneToEmail(body.phone);
       const derivedPassword = this.deriveOtpPassword(body.phone);
       const { data: session, error: signInError } = await this.supabase.createAuthClient()
-        .auth.signInWithPassword({ phone: body.phone, password: derivedPassword });
+        .auth.signInWithPassword({ email: derivedEmail, password: derivedPassword });
 
       if (signInError) throw new BadRequestException(signInError.message);
 
@@ -125,12 +143,16 @@ export class AuthService {
       };
     }
 
-    // New user — create account
+    // New user — create account using derived email (no Supabase phone auth needed)
+    const e164 = this.toE164(body.phone);
+    const derivedEmail = this.phoneToEmail(body.phone);
     const derivedPassword = this.deriveOtpPassword(body.phone);
     const { data: authData, error: authError } = await this.supabase.client.auth.admin
       .createUser({
-        phone: body.phone,
+        email: derivedEmail,
         password: derivedPassword,
+        email_confirm: true,
+        phone: e164,
         phone_confirm: true,
       });
 
@@ -140,7 +162,7 @@ export class AuthService {
       .from('users')
       .insert({
         id: authData.user.id,
-        phone: body.phone,
+        phone: e164,
       })
       .select(USER_COLUMNS)
       .single();
@@ -148,7 +170,7 @@ export class AuthService {
     if (insertError) throw new BadRequestException(insertError.message);
 
     const { data: session, error: sessionError } = await this.supabase.createAuthClient()
-      .auth.signInWithPassword({ phone: body.phone, password: derivedPassword });
+      .auth.signInWithPassword({ email: derivedEmail, password: derivedPassword });
 
     if (sessionError) throw new BadRequestException(sessionError.message);
 

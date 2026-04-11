@@ -71,6 +71,19 @@ export class NotificationsService {
     return data;
   }
 
+  async remove(userId: string, id: string) {
+    const { data, error } = await this.supabase.client
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id')
+      .single();
+    if (error || !data) throw new NotFoundException('Notification not found');
+
+    return { message: 'Notification deleted' };
+  }
+
   async removeDeviceToken(userId: string, token: string) {
     const { data, error } = await this.supabase.client
       .from('device_tokens')

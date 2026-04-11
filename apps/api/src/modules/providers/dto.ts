@@ -88,6 +88,17 @@ export class UpdateListingDto {
   cancellation_policy?: 'flexible' | 'moderate' | 'strict';
 }
 
+export class UploadDocumentsDto {
+  @ApiPropertyOptional({ example: ['https://storage.example.com/license1.jpg'], description: 'License photo URLs (max 3)', type: [String] })
+  license_photos?: string[];
+
+  @ApiPropertyOptional({ example: ['https://storage.example.com/facility1.jpg'], description: 'Facility photo URLs (max 30)', type: [String] })
+  facility_photos?: string[];
+
+  @ApiPropertyOptional({ example: [], description: 'Certification photo URLs (max 10)', type: [String] })
+  certification_photos?: string[];
+}
+
 export class CreateRoomDto {
   @ApiProperty({ example: 'Deluxe Suite', description: 'Room name', minLength: 1, maxLength: 100 })
   name: string;
@@ -167,4 +178,21 @@ export class UpdateAvailabilityDto {
 
   @ApiProperty({ type: [AvailabilityDateDto], description: 'Array of date availability entries' })
   dates: AvailabilityDateDto[];
+}
+
+export class BulkUpdateAvailabilityDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Room type UUID' })
+  room_type_id: string;
+
+  @ApiProperty({ example: '2026-04-15', description: 'Start date (YYYY-MM-DD)' })
+  start_date: string;
+
+  @ApiProperty({ example: '2026-04-30', description: 'End date (YYYY-MM-DD)' })
+  end_date: string;
+
+  @ApiProperty({ example: 3, description: 'Available slots for each date' })
+  available_slots: number;
+
+  @ApiProperty({ example: false, description: 'Whether to block the dates', default: false })
+  is_blocked: boolean;
 }

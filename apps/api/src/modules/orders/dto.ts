@@ -26,9 +26,42 @@ export class CreateOrderDto {
   daily_status_report: boolean;
 }
 
+export class CalculatePriceDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Provider UUID' })
+  provider_id: string;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001', description: 'Room type UUID' })
+  room_type_id: string;
+
+  @ApiProperty({ example: ['550e8400-e29b-41d4-a716-446655440010'], description: 'Pet UUIDs', type: [String] })
+  pet_ids: string[];
+
+  @ApiProperty({ example: '2026-04-15', description: 'Check-in date' })
+  check_in_date: string;
+
+  @ApiProperty({ example: '2026-04-18', description: 'Check-out date' })
+  check_out_date: string;
+
+  @ApiProperty({ example: [], description: 'Add-on service UUIDs', type: [String], default: [] })
+  add_on_ids: string[];
+}
+
 export class CancelOrderDto {
   @ApiProperty({ example: 'Change of plans, need to reschedule.', description: 'Cancellation reason', minLength: 1, maxLength: 500 })
   reason: string;
+}
+
+export class DeclineOrderDto {
+  @ApiProperty({ example: 'No capacity available for these dates.', description: 'Decline reason', minLength: 1, maxLength: 500 })
+  reason: string;
+}
+
+export class CheckOutOrderDto {
+  @ApiProperty({ example: ['https://storage.example.com/checkout1.jpg'], description: 'Check-out photo URLs (1-5)', type: [String] })
+  photos: string[];
+
+  @ApiPropertyOptional({ example: 'Pet is healthy and happy.', description: 'Check-out note', maxLength: 500 })
+  note?: string;
 }
 
 export class UpdateOrderStatusDto {

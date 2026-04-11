@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format').refine(
+  (s) => !isNaN(Date.parse(s)),
+  'Invalid date',
+)
+
 export const registerProviderSchema = z.object({
   business_name: z.string().min(2).max(200),
   description: z.string().max(2000).optional(),
@@ -41,10 +46,10 @@ export const updateAddOnSchema = createAddOnSchema.partial()
 export const updateAvailabilitySchema = z.object({
   room_type_id: z.string().uuid(),
   dates: z.array(z.object({
-    date: z.string(),
-    available_slots: z.number().int().min(0),
+    date: dateString,
+    available_slots: z.number().int().min(0).max(1000),
     is_blocked: z.boolean().default(false),
-  })),
+  })).min(1),
 })
 
 export type RegisterProviderInput = z.infer<typeof registerProviderSchema>
@@ -53,4 +58,23 @@ export type CreateRoomInput = z.infer<typeof createRoomSchema>
 export type UpdateRoomInput = z.infer<typeof updateRoomSchema>
 export type CreateAddOnInput = z.infer<typeof createAddOnSchema>
 export type UpdateAddOnInput = z.infer<typeof updateAddOnSchema>
+export const bulkUpdateAvailabilitySchema = z.object({
+  room_type_id: z.string().uuid(),
+  start_date: dateString,
+  end_date: dateString,
+  available_slots: z.number().int().min(0).max(1000),
+  is_blocked: z.boolean().default(false),
+}).refine(
+  (d) => new Date(d.end_date) >= new Date(d.start_date),
+  { message: 'End date must be on or after start date', path: ['end_date'] },
+)
+
+export const uploadDocumentsSchema = z.object({
+  license_photos: z.array(z.string().url()).max(3).optional(),
+  facility_photos: z.array(z.string().url()).max(30).optional(),
+  certification_photos: z.array(z.string().url()).max(10).optional(),
+})
+
 export type UpdateAvailabilityInput = z.infer<typeof updateAvailabilitySchema>
+export type BulkUpdateAvailabilityInput = z.infer<typeof bulkUpdateAvailabilitySchema>
+export type UploadDocumentsInput = z.infer<typeof uploadDocumentsSchema>

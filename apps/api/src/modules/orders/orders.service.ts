@@ -5,9 +5,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, ORDER_HISTORY_COLUMNS } from '../../common/constants/columns';
+import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, ORDER_HISTORY_COLUMNS, CHECK_IN_PHOTO_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
-import type { CreateOrderInput, UpdateOrderStatusInput, CancelOrderInput } from '@petzone/validators';
+import type { CreateOrderInput, CalculatePriceInput, UpdateOrderStatusInput, CancelOrderInput, DeclineOrderInput, CheckOutOrderInput } from '@petzone/validators';
 
 const STATUS_TRANSITIONS: Record<string, { next: string; allowed_actors: string[] }[]> = {
   pending_payment: [{ next: 'pending', allowed_actors: ['owner'] }],
@@ -36,6 +36,47 @@ interface OrderWithProvider {
 export class OrdersService {
   constructor(private readonly supabase: SupabaseService) {}
 
+  async calculatePrice(body: CalculatePriceInput) {
+    const { data: roomType, error: rtErr } = await this.supabase.client
+      .from('room_types')
+      .select('id, price_per_night, provider_id')
+      .eq('id', body.room_type_id)
+      .single();
+    if (rtErr || !roomType) throw new NotFoundException('Room type not found');
+
+    const addOns: { id: string; name: string; price: number; price_type: string }[] = [];
+    if (body.add_on_ids?.length) {
+      const { data, error } = await this.supabase.client
+        .from('add_on_services')
+        .select('id, name, price, price_type')
+        .in('id', body.add_on_ids);
+      if (error) throw new BadRequestException('Failed to fetch add-on services');
+      addOns.push(...(data || []));
+    }
+
+    const checkIn = new Date(body.check_in_date);
+    const checkOut = new Date(body.check_out_date);
+    const numNights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    if (numNights < 1) throw new BadRequestException('Check-out must be after check-in');
+
+    const roomTotal = roomType.price_per_night * numNights;
+    const addOnBreakdown = addOns.map((a) => ({
+      id: a.id,
+      name: a.name,
+      price: a.price,
+      price_type: a.price_type,
+      subtotal: a.price_type === 'per_night' ? a.price * numNights : a.price,
+    }));
+    const addOnTotal = addOnBreakdown.reduce((sum, a) => sum + a.subtotal, 0);
+    const totalPrice = roomTotal + addOnTotal;
+
+    return {
+      room: { price_per_night: roomType.price_per_night, nights: numNights, subtotal: roomTotal },
+      add_ons: addOnBreakdown,
+      total: totalPrice,
+    };
+  }
+
   async create(userId: string, body: CreateOrderInput) {
     const [roomResult, providerResult] = await Promise.all([
       this.supabase.client
@@ -52,6 +93,28 @@ export class OrdersService {
 
     const { data: roomType, error: rtErr } = roomResult;
     if (rtErr || !roomType) throw new NotFoundException('Room type not found');
+
+    // Check room availability — prevent double-booking
+    const activeStatuses = ['pending_payment', 'pending', 'confirmed', 'checked_in', 'in_progress'];
+    const { count: overlapping } = await this.supabase.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_type_id', body.room_type_id)
+      .in('status', activeStatuses)
+      .lt('check_in_date', body.check_out_date)
+      .gt('check_out_date', body.check_in_date);
+    if (overlapping && overlapping > 0) {
+      // Check against room capacity via availability slots
+      const { data: availability } = await this.supabase.client
+        .from('room_availability')
+        .select('date, available_slots')
+        .eq('room_type_id', body.room_type_id)
+        .gte('date', body.check_in_date)
+        .lt('date', body.check_out_date)
+        .eq('is_blocked', false);
+      const hasBlockedDate = availability?.some((a: { available_slots: number }) => a.available_slots < 1);
+      if (hasBlockedDate) throw new BadRequestException('Room is not available for the selected dates');
+    }
 
     const addOns: { id: string; name: string; price: number; price_type: string }[] = [];
     if (body.add_on_ids?.length) {
@@ -135,7 +198,8 @@ export class OrdersService {
       .order('created_at', { ascending: false });
 
     if (providerIds.length) {
-      query = query.or(`owner_id.eq.${userId},provider_id.in.(${providerIds.join(',')})`);
+      const providerFilter = providerIds.map((id: string) => `provider_id.eq.${id}`).join(',');
+      query = query.or(`owner_id.eq.${userId},${providerFilter}`);
     } else {
       query = query.eq('owner_id', userId);
     }
@@ -155,6 +219,114 @@ export class OrdersService {
 
     await this.verifyAccess(userId, order as unknown as OrderWithProvider);
     return order;
+  }
+
+  async accept(userId: string, id: string) {
+    const order = await this.getOrderForProvider(userId, id);
+    if (order.status !== 'pending') throw new BadRequestException('Can only accept orders in pending status');
+
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .update({ status: 'confirmed', provider_response_deadline: null, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(ORDER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id, status: 'confirmed', actor_id: userId, actor_type: 'provider',
+    });
+
+    return data;
+  }
+
+  async decline(userId: string, id: string, body: DeclineOrderInput) {
+    const order = await this.getOrderForProvider(userId, id);
+    if (order.status !== 'pending') throw new BadRequestException('Can only decline orders in pending status');
+
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: 'provider',
+        cancellation_reason: body.reason,
+        refund_amount: Number(order.total_price) || 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select(ORDER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id, status: 'cancelled', actor_id: userId, actor_type: 'provider', note: body.reason,
+    });
+
+    return data;
+  }
+
+  async confirmReceive(userId: string, id: string) {
+    const { data: order, error: fetchErr } = await this.supabase.client
+      .from('orders')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
+      .eq('id', id)
+      .single();
+    if (fetchErr || !order) throw new NotFoundException('Order not found');
+
+    const typedOrder = order as unknown as OrderWithProvider;
+    if (typedOrder.owner_id !== userId) throw new ForbiddenException('Only the owner can confirm receipt');
+    if (typedOrder.status !== 'check_out') throw new BadRequestException('Can only confirm receipt for orders in check_out status');
+
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(ORDER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id, status: 'completed', actor_id: userId, actor_type: 'owner',
+    });
+
+    return data;
+  }
+
+  async checkOut(userId: string, id: string, body: CheckOutOrderInput) {
+    const order = await this.getOrderForProvider(userId, id);
+    if (order.status !== 'in_progress') throw new BadRequestException('Can only check out orders in in_progress status');
+
+    // Save check-out photos
+    const provider = await this.supabase.client
+      .from('providers').select('id').eq('user_id', userId).single();
+    if (provider.error || !provider.data) throw new ForbiddenException('Not a provider');
+
+    for (const photoUrl of body.photos) {
+      await this.supabase.client.from('check_in_photos').insert({
+        order_id: id,
+        uploaded_by: userId,
+        role: 'provider',
+        handoff_point: 'store_to_owner',
+        photo_url: photoUrl,
+        timestamp: new Date().toISOString(),
+        has_concern: false,
+      });
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .update({ status: 'check_out', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(ORDER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id, status: 'check_out', actor_id: userId, actor_type: 'provider', note: body.note || null,
+    });
+
+    return data;
   }
 
   async updateStatus(userId: string, id: string, body: UpdateOrderStatusInput) {
@@ -258,6 +430,19 @@ export class OrdersService {
       .order('created_at', { ascending: true });
     if (error) throw new BadRequestException(error.message);
     return data;
+  }
+
+  private async getOrderForProvider(userId: string, orderId: string): Promise<OrderWithProvider> {
+    const { data: order, error } = await this.supabase.client
+      .from('orders')
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
+      .eq('id', orderId)
+      .single();
+    if (error || !order) throw new NotFoundException('Order not found');
+
+    const typedOrder = order as unknown as OrderWithProvider;
+    if (this.getProviderUserId(typedOrder) !== userId) throw new ForbiddenException('Only the provider can perform this action');
+    return typedOrder;
   }
 
   private getProviderUserId(order: OrderWithProvider): string | undefined {

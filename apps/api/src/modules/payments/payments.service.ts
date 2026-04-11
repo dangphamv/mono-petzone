@@ -80,8 +80,8 @@ export class PaymentsService {
     return { payment: updatedPayment, redirect_url: null };
   }
 
-  callback() {
-    return { message: 'Webhook endpoint ready' };
+  callback(gateway: string) {
+    return { message: `Webhook endpoint ready for ${gateway}` };
   }
 
   async findByOrder(userId: string, orderId: string) {
@@ -113,10 +113,16 @@ export class PaymentsService {
   async refund(userId: string, orderId: string, body: RefundInput) {
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
-      .select(ORDER_COLUMNS)
+      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
       .eq('id', orderId)
       .single();
     if (orderErr || !order) throw new NotFoundException('Order not found');
+
+    const isOwner = order.owner_id === userId;
+    const providers = (order as Record<string, unknown>).providers as { user_id: string }[] | { user_id: string } | null;
+    const providerUserId = Array.isArray(providers) ? providers[0]?.user_id : providers?.user_id;
+    const isProvider = providerUserId === userId;
+    if (!isOwner && !isProvider) throw new ForbiddenException('Not authorized to refund this order');
 
     const { data: payment, error: payErr } = await this.supabase.client
       .from('payments')
@@ -128,8 +134,10 @@ export class PaymentsService {
       .single();
     if (payErr || !payment) throw new NotFoundException('No completed payment found for this order');
 
-    if (body.amount > Number(payment.amount))
-      throw new BadRequestException('Refund amount exceeds payment amount');
+    const alreadyRefunded = Number(payment.refund_amount) || 0;
+    const remainingRefundable = Number(payment.amount) - alreadyRefunded;
+    if (body.amount > remainingRefundable)
+      throw new BadRequestException(`Refund amount exceeds remaining refundable amount (${remainingRefundable})`);
 
     const { data: refund, error: refErr } = await this.supabase.client
       .from('refunds')

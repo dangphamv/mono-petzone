@@ -5,18 +5,31 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   createOrderSchema,
+  calculatePriceSchema,
   updateOrderStatusSchema,
   cancelOrderSchema,
+  declineOrderSchema,
+  checkOutOrderSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, CancelOrderDto, UpdateOrderStatusDto } from './dto';
+import { CreateOrderDto, CalculatePriceDto, CancelOrderDto, DeclineOrderDto, CheckOutOrderDto, UpdateOrderStatusDto } from './dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth('access-token')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Post('calculate-price')
+  @ApiOperation({ summary: 'Calculate price breakdown for a booking' })
+  @ApiResponse({ status: 201, description: 'Price breakdown returned' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Room type not found' })
+  calculatePrice(@Body(new ZodValidationPipe(calculatePriceSchema)) body: CalculatePriceDto) {
+    return this.ordersService.calculatePrice(body);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new booking order' })
@@ -50,6 +63,50 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.findOne(user.id, id);
+  }
+
+  @Post(':id/accept')
+  @ApiOperation({ summary: 'Provider accepts an order' })
+  @ApiResponse({ status: 201, description: 'Order accepted' })
+  @ApiResponse({ status: 400, description: 'Order not in pending status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Only the provider can accept' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  accept(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.ordersService.accept(user.id, id);
+  }
+
+  @Post(':id/decline')
+  @ApiOperation({ summary: 'Provider declines an order' })
+  @ApiResponse({ status: 201, description: 'Order declined, owner refunded 100%' })
+  @ApiResponse({ status: 400, description: 'Order not in pending status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Only the provider can decline' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  decline(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(declineOrderSchema)) body: DeclineOrderDto) {
+    return this.ordersService.decline(user.id, id, body);
+  }
+
+  @Post(':id/confirm-receive')
+  @ApiOperation({ summary: 'Owner confirms pet receipt after check-out' })
+  @ApiResponse({ status: 201, description: 'Order completed' })
+  @ApiResponse({ status: 400, description: 'Order not in check_out status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Only the owner can confirm receipt' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  confirmReceive(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.ordersService.confirmReceive(user.id, id);
+  }
+
+  @Post(':id/check-out')
+  @ApiOperation({ summary: 'Provider uploads check-out photos' })
+  @ApiResponse({ status: 201, description: 'Check-out recorded, awaiting owner confirmation' })
+  @ApiResponse({ status: 400, description: 'Order not in in_progress status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Only the provider can check out' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  checkOut(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(checkOutOrderSchema)) body: CheckOutOrderDto) {
+    return this.ordersService.checkOut(user.id, id, body);
   }
 
   @Patch(':id/status')

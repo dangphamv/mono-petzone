@@ -8,6 +8,11 @@ export class VerifyProviderDto {
   notes?: string;
 }
 
+export class RequestInfoDto {
+  @ApiProperty({ example: 'Please upload a clearer photo of your business license.', description: 'Required information (1-1000 chars)' })
+  requirements: string;
+}
+
 export class ResolveDisputeDto {
   @ApiProperty({ example: 'Refund issued to owner. Provider warned.', description: 'Resolution details (1-2000 chars)' })
   resolution: string;
@@ -41,4 +46,9 @@ export class UpdateConfigDto {
 
   @ApiPropertyOptional({ example: 24, description: 'Hours before payment times out' })
   payment_timeout_hours?: number;
+}
+
+export class AdminMessageDto {
+  @ApiProperty({ example: 'Please resolve this issue between yourselves or contact support.', description: 'Mediation message (1-2000 chars)' })
+  message: string;
 }

@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Put } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Put, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { PAGINATION } from '@petzone/shared';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -11,10 +13,16 @@ import {
   createAddOnSchema,
   updateAddOnSchema,
   updateAvailabilitySchema,
+  bulkUpdateAvailabilitySchema,
+  uploadDocumentsSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ProvidersService } from './providers.service';
-import { RegisterProviderDto, UpdateListingDto, CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto, UpdateAvailabilityDto } from './dto';
+import {
+  RegisterProviderDto, UpdateListingDto, UploadDocumentsDto,
+  CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto,
+  UpdateAvailabilityDto, BulkUpdateAvailabilityDto,
+} from './dto';
 
 @ApiTags('Providers')
 @Controller('providers')
@@ -22,6 +30,7 @@ export class ProvidersController {
   constructor(private readonly providersService: ProvidersService) {}
 
   @Post('register')
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Register as a provider' })
   @ApiResponse({ status: 201, description: 'Provider registered successfully' })
@@ -32,13 +41,14 @@ export class ProvidersController {
     return this.providersService.register(user.id, body);
   }
 
-  @Get(':id')
-  @Public()
-  @ApiOperation({ summary: 'Get provider public profile' })
+  @Get('me')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get own provider profile' })
   @ApiResponse({ status: 200, description: 'Provider profile returned' })
-  @ApiResponse({ status: 404, description: 'Provider not found' })
-  findOne(@Param('id') id: string) {
-    return this.providersService.findOne(id);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  getMe(@CurrentUser() user: AuthUser) {
+    return this.providersService.getMe(user.id);
   }
 
   @Patch('me')
@@ -50,6 +60,68 @@ export class ProvidersController {
   @ApiResponse({ status: 403, description: 'Not a provider' })
   updateMe(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateListingSchema)) body: UpdateListingDto) {
     return this.providersService.updateMe(user.id, body);
+  }
+
+  @Post('me/documents')
+  @Throttle({ default: { ttl: 60000, limit: 15 } })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload provider verification documents' })
+  @ApiResponse({ status: 201, description: 'Documents uploaded' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  uploadDocuments(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(uploadDocumentsSchema)) body: UploadDocumentsDto) {
+    return this.providersService.uploadDocuments(user.id, body);
+  }
+
+  @Post('me/submit-verification')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Submit provider for admin verification' })
+  @ApiResponse({ status: 201, description: 'Submitted for verification' })
+  @ApiResponse({ status: 400, description: 'Missing required documents' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  submitVerification(@CurrentUser() user: AuthUser) {
+    return this.providersService.submitVerification(user.id);
+  }
+
+  @Get('me/verification-status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Check provider verification status' })
+  @ApiResponse({ status: 200, description: 'Verification status returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  getVerificationStatus(@CurrentUser() user: AuthUser) {
+    return this.providersService.getVerificationStatus(user.id);
+  }
+
+  @Get('me/orders')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List orders for this provider' })
+  @ApiResponse({ status: 200, description: 'Provider orders returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  getOrders(
+    @CurrentUser() user: AuthUser,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.providersService.getOrders(user.id, {
+      status,
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+    });
+  }
+
+  @Get('me/stats')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get provider monthly stats' })
+  @ApiResponse({ status: 200, description: 'Stats returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  getStats(@CurrentUser() user: AuthUser, @Query('month') month?: string) {
+    return this.providersService.getStats(user.id, month);
   }
 
   @Get('me/rooms')
@@ -159,5 +231,43 @@ export class ProvidersController {
   @ApiResponse({ status: 403, description: 'Not a provider' })
   updateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateAvailabilitySchema)) body: UpdateAvailabilityDto) {
     return this.providersService.updateAvailability(user.id, body);
+  }
+
+  @Put('me/availability/bulk')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Bulk update availability for a date range' })
+  @ApiResponse({ status: 200, description: 'Availability bulk updated' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Not a provider' })
+  bulkUpdateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(bulkUpdateAvailabilitySchema)) body: BulkUpdateAvailabilityDto) {
+    return this.providersService.bulkUpdateAvailability(user.id, body);
+  }
+
+  @Get(':id')
+  @Public()
+  @ApiOperation({ summary: 'Get provider public profile' })
+  @ApiResponse({ status: 200, description: 'Provider profile returned' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  findOne(@Param('id') id: string) {
+    return this.providersService.findOne(id);
+  }
+
+  @Get(':id/rooms')
+  @Public()
+  @ApiOperation({ summary: 'Get provider room types' })
+  @ApiResponse({ status: 200, description: 'Rooms returned' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  getPublicRooms(@Param('id') id: string) {
+    return this.providersService.getPublicRooms(id);
+  }
+
+  @Get(':id/addons')
+  @Public()
+  @ApiOperation({ summary: 'Get provider add-on services' })
+  @ApiResponse({ status: 200, description: 'Add-ons returned' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  getPublicAddOns(@Param('id') id: string) {
+    return this.providersService.getPublicAddOns(id);
   }
 }

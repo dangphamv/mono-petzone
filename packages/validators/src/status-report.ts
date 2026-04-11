@@ -7,4 +7,14 @@ export const createStatusReportSchema = z.object({
   note: z.string().max(2000).optional(),
 })
 
+export const reactStatusReportSchema = z.object({
+  reaction: z.enum(['heart', 'thumbs_up']),
+})
+
+export const replyStatusReportSchema = z.object({
+  text: z.string().min(1).max(500),
+})
+
 export type CreateStatusReportInput = z.infer<typeof createStatusReportSchema>
+export type ReactStatusReportInput = z.infer<typeof reactStatusReportSchema>
+export type ReplyStatusReportInput = z.infer<typeof replyStatusReportSchema>

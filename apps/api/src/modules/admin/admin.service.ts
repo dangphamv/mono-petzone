@@ -8,10 +8,12 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type {
   VerifyProviderInput,
+  RequestInfoInput,
   ResolveDisputeInput,
   SuspendUserInput,
   ModerateReviewInput,
   UpdateConfigInput,
+  AdminMessageInput,
 } from '@petzone/validators';
 import { SupabaseService } from '../supabase/supabase.service';
 import { PROVIDER_COLUMNS, ORDER_LIST_COLUMNS, DISPUTE_COLUMNS, USER_COLUMNS, REVIEW_COLUMNS } from '../../common/constants/columns';
@@ -49,18 +51,39 @@ export class AdminService {
     return result;
   }
 
-  async getProviders(params: PaginationParams) {
-    const { page = 1, limit = 20 } = params;
+  async getProviders(params: PaginationParams & { status?: string }) {
+    const { page = 1, limit = 20, status } = params;
     const from = (page - 1) * limit;
 
-    const { data, error, count } = await this.supabase.client
+    let query = this.supabase.client
       .from('providers')
       .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, email, full_name, avatar_url)`, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, from + limit - 1);
+      .order('created_at', { ascending: true });
+
+    if (status) query = query.eq('verification_status', status);
+
+    const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
     return paginate(data ?? [], count ?? 0, { page, limit });
+  }
+
+  async getProviderDetail(id: string) {
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, email, full_name, avatar_url)`)
+      .eq('id', id)
+      .single();
+    if (error || !data) throw new NotFoundException('Provider not found');
+
+    const { data: history } = await this.supabase.client
+      .from('admin_action_log')
+      .select('*')
+      .eq('target_type', 'provider')
+      .eq('target_id', id)
+      .order('created_at', { ascending: false });
+
+    return { ...data, verification_history: history || [] };
   }
 
   async verifyProvider(userId: string, id: string, body: VerifyProviderInput) {
@@ -80,6 +103,22 @@ export class AdminService {
     await this.logAction(userId, 'verify_provider', 'provider', id, {
       status: body.status,
       notes: body.notes,
+    });
+
+    return data;
+  }
+
+  async requestInfo(adminId: string, providerId: string, body: RequestInfoInput) {
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .update({ verification_status: 'info_requested' })
+      .eq('id', providerId)
+      .select(PROVIDER_COLUMNS)
+      .single();
+    if (error || !data) throw new NotFoundException('Provider not found');
+
+    await this.logAction(adminId, 'request_info', 'provider', providerId, {
+      requirements: body.requirements,
     });
 
     return data;
@@ -114,6 +153,23 @@ export class AdminService {
   }
 
   async resolveDispute(userId: string, id: string, body: ResolveDisputeInput) {
+    // Fetch dispute first to validate refund amount against order
+    const { data: existingDispute, error: fetchErr } = await this.supabase.client
+      .from('disputes')
+      .select(`${DISPUTE_COLUMNS}, orders(id, total_price)`)
+      .eq('id', id)
+      .single();
+    if (fetchErr || !existingDispute) throw new NotFoundException('Dispute not found');
+    if (existingDispute.status === 'resolved')
+      throw new BadRequestException('Dispute is already resolved');
+
+    if (body.refund_amount != null) {
+      const order = (existingDispute as Record<string, unknown>).orders as { total_price: number } | { total_price: number }[] | null;
+      const totalPrice = Array.isArray(order) ? order[0]?.total_price : order?.total_price;
+      if (totalPrice != null && body.refund_amount > Number(totalPrice))
+        throw new BadRequestException(`Refund amount cannot exceed order total (${totalPrice})`);
+    }
+
     const { data: dispute, error: disputeErr } = await this.supabase.client
       .from('disputes')
       .update({
@@ -125,7 +181,7 @@ export class AdminService {
       .eq('id', id)
       .select(DISPUTE_COLUMNS)
       .single();
-    if (disputeErr || !dispute) throw new NotFoundException('Dispute not found');
+    if (disputeErr || !dispute) throw new BadRequestException('Failed to resolve dispute');
 
     if (body.refund_amount != null) {
       await this.supabase.client
@@ -265,30 +321,85 @@ export class AdminService {
     return result;
   }
 
+  private readonly CONFIG_DEFAULTS = {
+    commission_rate: 0.15,
+    auto_confirm_hours: 4,
+    payment_timeout_hours: 24,
+  };
+
   async getConfig() {
     const cacheKey = 'admin:config';
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = {
-      commission_rate: 0.15,
-      auto_confirm_hours: 4,
-      payment_timeout_hours: 24,
-    };
+    const { data } = await this.supabase.client
+      .from('app_config')
+      .select('key, value')
+      .in('key', Object.keys(this.CONFIG_DEFAULTS));
 
-    await this.cache.set(cacheKey, result, 600_000);
-    return result;
+    const config = { ...this.CONFIG_DEFAULTS };
+    if (data) {
+      for (const row of data as { key: string; value: string }[]) {
+        if (row.key in config) {
+          (config as Record<string, unknown>)[row.key] = Number(row.value) || row.value;
+        }
+      }
+    }
+
+    await this.cache.set(cacheKey, config, 600_000);
+    return config;
   }
 
   async updateConfig(userId: string, body: UpdateConfigInput) {
-    await this.cache.del('admin:config');
+    const entries = Object.entries(body).filter(([, v]) => v != null);
+    for (const [key, value] of entries) {
+      await this.supabase.client
+        .from('app_config')
+        .upsert({ key, value: String(value), updated_by: userId }, { onConflict: 'key' });
+    }
 
-    const defaults = {
-      commission_rate: 0.15,
-      auto_confirm_hours: 4,
-      payment_timeout_hours: 24,
-    };
-    return { ...defaults, ...body };
+    await this.cache.del('admin:config');
+    await this.logAction(userId, 'update_config', 'config', 'app_config', body as Record<string, unknown>);
+
+    return this.getConfig();
+  }
+
+  async sendMessage(adminId: string, orderId: string, body: AdminMessageInput) {
+    const { data: order, error } = await this.supabase.client
+      .from('orders')
+      .select('id, owner_id, provider_id')
+      .eq('id', orderId)
+      .single();
+    if (error || !order) throw new NotFoundException('Order not found');
+
+    // Create notifications for both parties
+    const notifications = [
+      { user_id: order.owner_id, type: 'admin_message', title: 'Message from Admin', body: body.message, data: { order_id: orderId } },
+      { user_id: order.provider_id, type: 'admin_message', title: 'Message from Admin', body: body.message, data: { order_id: orderId } },
+    ].filter((n) => n.user_id);
+
+    if (notifications.length) {
+      await this.supabase.client.from('notifications').insert(notifications);
+    }
+
+    await this.logAction(adminId, 'send_message', 'order', orderId, {
+      message: body.message,
+      owner_id: order.owner_id,
+      provider_id: order.provider_id,
+    });
+
+    return { message: 'Mediation message sent to both parties' };
+  }
+
+  async exportOrders() {
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`)
+      .order('created_at', { ascending: false })
+      .limit(10000);
+    if (error) throw new BadRequestException('Failed to export orders');
+
+    return data || [];
   }
 
   private async logAction(
@@ -298,12 +409,13 @@ export class AdminService {
     targetId: string,
     details: Record<string, unknown>,
   ) {
-    await this.supabase.client.from('admin_action_log').insert({
+    const { error } = await this.supabase.client.from('admin_action_log').insert({
       admin_id: adminId,
       action_type: actionType,
       target_type: targetType,
       target_id: targetId,
       details,
     });
+    if (error) console.error(`Failed to log admin action: ${actionType}`, error.message);
   }
 }

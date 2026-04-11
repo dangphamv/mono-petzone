@@ -1,19 +1,21 @@
-import { Controller, Get, Patch, Put, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Put, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
 import {
   verifyProviderSchema,
+  requestInfoSchema,
   resolveDisputeSchema,
   suspendUserSchema,
   moderateReviewSchema,
   updateConfigSchema,
+  adminMessageSchema,
 } from '@petzone/validators';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AdminService } from './admin.service';
-import { VerifyProviderDto, ResolveDisputeDto, SuspendUserDto, ModerateReviewDto, UpdateConfigDto } from './dto';
+import { VerifyProviderDto, RequestInfoDto, ResolveDisputeDto, SuspendUserDto, ModerateReviewDto, UpdateConfigDto, AdminMessageDto } from './dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth('access-token')
@@ -36,11 +38,26 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Providers list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Admin role required' })
-  getProviders(@Query('page') page?: string, @Query('limit') limit?: string) {
+  getProviders(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
     return this.adminService.getProviders({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+      status,
     });
+  }
+
+  @Get('providers/:id')
+  @ApiOperation({ summary: 'Get provider detail with verification history' })
+  @ApiResponse({ status: 200, description: 'Provider detail returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  getProviderDetail(@Param('id') id: string) {
+    return this.adminService.getProviderDetail(id);
   }
 
   @Patch('providers/:id/verify')
@@ -54,6 +71,17 @@ export class AdminController {
     return this.adminService.verifyProvider(user.id, id, body);
   }
 
+  @Post('providers/:id/request-info')
+  @ApiOperation({ summary: 'Request additional info from provider' })
+  @ApiResponse({ status: 201, description: 'Info request sent to provider' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  requestInfo(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(requestInfoSchema)) body: RequestInfoDto) {
+    return this.adminService.requestInfo(user.id, id, body);
+  }
+
   @Get('orders')
   @ApiOperation({ summary: 'List all orders' })
   @ApiResponse({ status: 200, description: 'Orders list returned' })
@@ -64,6 +92,26 @@ export class AdminController {
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
     });
+  }
+
+  @Get('orders/export')
+  @ApiOperation({ summary: 'Export orders as CSV' })
+  @ApiResponse({ status: 200, description: 'CSV file returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
+  exportOrders() {
+    return this.adminService.exportOrders();
+  }
+
+  @Post('orders/:id/message')
+  @ApiOperation({ summary: 'Send mediation message to both parties' })
+  @ApiResponse({ status: 201, description: 'Message sent to both parties' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  sendMessage(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(adminMessageSchema)) body: AdminMessageDto) {
+    return this.adminService.sendMessage(user.id, id, body);
   }
 
   @Get('disputes')

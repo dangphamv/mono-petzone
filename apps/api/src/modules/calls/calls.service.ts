@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CHAT_CONVERSATION_COLUMNS, CALL_LOG_COLUMNS } from '../../common/constants/columns';
-import type { InitiateCallInput } from '@petzone/validators';
+import type { InitiateCallInput, EndCallInput } from '@petzone/validators';
 
 @Injectable()
 export class CallsService {
@@ -33,6 +33,7 @@ export class CallsService {
         order_id: conversation.order_id,
         caller_id: userId,
         callee_id: calleeId,
+        call_type: body.type,
         status: 'initiating',
       })
       .select()
@@ -40,6 +41,33 @@ export class CallsService {
     if (error) throw new BadRequestException(error.message);
 
     return call;
+  }
+
+  async end(userId: string, callId: string, body: EndCallInput) {
+    const { data: call, error: fetchErr } = await this.supabase.client
+      .from('call_logs')
+      .select(CALL_LOG_COLUMNS)
+      .eq('id', callId)
+      .single();
+    if (fetchErr || !call) throw new NotFoundException('Call not found');
+    if (call.caller_id !== userId && call.callee_id !== userId)
+      throw new ForbiddenException('Not a participant of this call');
+    if (call.status === 'completed')
+      throw new BadRequestException('Call has already ended');
+
+    const { data, error } = await this.supabase.client
+      .from('call_logs')
+      .update({
+        status: 'completed',
+        duration_seconds: body.duration_seconds,
+        ended_at: new Date().toISOString(),
+      })
+      .eq('id', callId)
+      .select(CALL_LOG_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    return data;
   }
 
   async getLog(userId: string, conversationId: string) {
@@ -56,9 +84,14 @@ export class CallsService {
       .from('call_logs')
       .select(CALL_LOG_COLUMNS)
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw new BadRequestException(error.message);
 
     return data;
+  }
+
+  webhook() {
+    return { message: 'Call webhook endpoint ready' };
   }
 }

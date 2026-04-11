@@ -36,4 +36,9 @@ export const updateConfigSchema = z.object({
   payment_timeout_hours: z.number().int().positive().optional(),
 })
 
+export const adminMessageSchema = z.object({
+  message: z.string().min(1).max(2000),
+})
+
 export type UpdateConfigInput = z.infer<typeof updateConfigSchema>
+export type AdminMessageInput = z.infer<typeof adminMessageSchema>

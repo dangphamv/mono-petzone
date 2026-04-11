@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { STATUS_REPORT_COLUMNS, ORDER_COLUMNS } from '../../common/constants/columns';
-import type { CreateStatusReportInput } from '@petzone/validators';
+import type { CreateStatusReportInput, ReactStatusReportInput, ReplyStatusReportInput } from '@petzone/validators';
 
 @Injectable()
 export class StatusReportsService {
@@ -70,6 +70,49 @@ export class StatusReportsService {
     if (error || !data) throw new NotFoundException('Status report not found');
 
     return data;
+  }
+
+  async react(userId: string, reportId: string, body: ReactStatusReportInput) {
+    const report = await this.getReportForOwner(userId, reportId);
+
+    const { data, error } = await this.supabase.client
+      .from('status_reports')
+      .update({ owner_reaction: body.reaction })
+      .eq('id', report.id)
+      .select(STATUS_REPORT_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    return data;
+  }
+
+  async reply(userId: string, reportId: string, body: ReplyStatusReportInput) {
+    const report = await this.getReportForOwner(userId, reportId);
+
+    const { data, error } = await this.supabase.client
+      .from('status_reports')
+      .update({ owner_reply: body.text, owner_replied_at: new Date().toISOString() })
+      .eq('id', report.id)
+      .select(STATUS_REPORT_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    return data;
+  }
+
+  private async getReportForOwner(userId: string, reportId: string) {
+    const { data: report, error } = await this.supabase.client
+      .from('status_reports')
+      .select(`${STATUS_REPORT_COLUMNS}, orders!inner(owner_id)`)
+      .eq('id', reportId)
+      .single();
+    if (error || !report) throw new NotFoundException('Status report not found');
+
+    const orders = (report as Record<string, unknown>).orders as { owner_id: string }[] | { owner_id: string } | null;
+    const ownerId = Array.isArray(orders) ? orders[0]?.owner_id : orders?.owner_id;
+    if (ownerId !== userId) throw new ForbiddenException('Only the order owner can react/reply');
+
+    return report;
   }
 
   private async verifyOrderAccess(userId: string, orderId: string) {

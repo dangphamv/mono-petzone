@@ -33,13 +33,12 @@ export class UsersController {
     return this.usersService.updateMe(user.id, body);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'User profile returned' })
+  @Get('me/notification-preferences')
+  @ApiOperation({ summary: 'Get notification preferences' })
+  @ApiResponse({ status: 200, description: 'Notification preferences returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  getById(@Param('id') id: string) {
-    return this.usersService.getById(id);
+  getNotificationPreferences(@CurrentUser() user: AuthUser) {
+    return this.usersService.getNotificationPreferences(user.id);
   }
 
   @Patch('me/notification-preferences')
@@ -49,5 +48,14 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   updateNotificationPreferences(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(notificationPreferencesSchema)) body: NotificationPreferencesDto) {
     return this.usersService.updateNotificationPreferences(user.id, body);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User profile returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  getById(@Param('id') id: string) {
+    return this.usersService.getById(id);
   }
 }

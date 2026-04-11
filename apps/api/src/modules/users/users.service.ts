@@ -41,6 +41,17 @@ export class UsersService {
     return data;
   }
 
+  async getNotificationPreferences(userId: string) {
+    const { data, error } = await this.supabase.client
+      .from('users')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return data?.notification_preferences ?? {};
+  }
+
   async updateNotificationPreferences(userId: string, body: NotificationPreferencesInput) {
     const { data: current, error: fetchError } = await this.supabase.client
       .from('users')

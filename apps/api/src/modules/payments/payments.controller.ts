@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
 import { Public } from '../../common/decorators/public.decorator';
@@ -15,6 +16,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('create')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a payment for an order' })
   @ApiResponse({ status: 201, description: 'Payment created, redirect URL returned' })
@@ -25,13 +27,13 @@ export class PaymentsController {
     return this.paymentsService.create(user.id, body);
   }
 
-  @Get('callback')
+  @Post('callback/:gateway')
   @Public()
   @ApiOperation({ summary: 'Payment gateway webhook callback' })
   @ApiResponse({ status: 200, description: 'Webhook processed' })
   @ApiResponse({ status: 400, description: 'Invalid webhook signature' })
-  callback() {
-    return this.paymentsService.callback();
+  callback(@Param('gateway') gateway: string) {
+    return this.paymentsService.callback(gateway);
   }
 
   @Get('payouts')
@@ -52,6 +54,7 @@ export class PaymentsController {
   }
 
   @Post('payouts/request')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Request a payout' })
   @ApiResponse({ status: 201, description: 'Payout request submitted' })
@@ -73,6 +76,7 @@ export class PaymentsController {
   }
 
   @Post(':orderId/refund')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Request a refund for an order' })
   @ApiResponse({ status: 201, description: 'Refund initiated' })

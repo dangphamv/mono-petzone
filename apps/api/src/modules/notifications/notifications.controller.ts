@@ -29,6 +29,14 @@ export class NotificationsController {
     });
   }
 
+  @Patch('read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  markAllRead(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.markAllRead(user.id);
+  }
+
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
@@ -36,14 +44,6 @@ export class NotificationsController {
   @ApiResponse({ status: 404, description: 'Notification not found' })
   markRead(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.notificationsService.markRead(user.id, id);
-  }
-
-  @Patch('read-all')
-  @ApiOperation({ summary: 'Mark all notifications as read' })
-  @ApiResponse({ status: 200, description: 'All notifications marked as read' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  markAllRead(@CurrentUser() user: AuthUser) {
-    return this.notificationsService.markAllRead(user.id);
   }
 
   @Post('device-token')
@@ -62,5 +62,14 @@ export class NotificationsController {
   @ApiResponse({ status: 404, description: 'Device token not found' })
   removeDeviceToken(@CurrentUser() user: AuthUser, @Param('token') token: string) {
     return this.notificationsService.removeDeviceToken(user.id, token);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a notification' })
+  @ApiResponse({ status: 200, description: 'Notification deleted' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.notificationsService.remove(user.id, id);
   }
 }

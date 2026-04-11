@@ -24,9 +24,14 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  private isTestPhone(phone: string): boolean {
+    const list = this.config.get<string>('TEST_PHONE_NUMBERS') || '';
+    return list.split(',').map((n) => n.trim()).filter(Boolean).includes(phone);
+  }
+
   async sendOtp(body: SendOtpInput) {
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
-    const otp = isDev ? '123456' : String(Math.floor(100000 + Math.random() * 900000));
+    const isTest = this.isTestPhone(body.phone);
+    const otp = isTest ? '123456' : String(Math.floor(100000 + Math.random() * 900000));
     const otpHash = createHash('sha256').update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 60 * 1000).toISOString();
 
@@ -42,15 +47,13 @@ export class AuthService {
 
     return {
       message: 'OTP sent',
-      ...(isDev && { otp }),
+      ...(isTest && { otp }),
     };
   }
 
   async verifyOtp(body: VerifyOtpInput) {
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
-
-    if (isDev && body.otp === '123456') {
-      // Dev shortcut — skip OTP record validation
+    if (this.isTestPhone(body.phone) && body.otp === '123456') {
+      // Test phone shortcut — skip OTP record validation
     } else {
       const { data: otpRecord, error: otpError } = await this.supabase.client
         .from('otp_verifications')

@@ -6,6 +6,13 @@ import { uploadCheckInPhotosSchema } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { CheckInService } from './check-in.service';
 import { UploadCheckInPhotosDto } from './dto';
+import {
+  ok,
+  EXAMPLE_CHECK_IN_PHOTO,
+  ERROR_400,
+  ERROR_401,
+  ERROR_404,
+} from '../../common/swagger/examples';
 
 @ApiTags('Check-in')
 @ApiBearerAuth('access-token')
@@ -15,10 +22,10 @@ export class CheckInController {
 
   @Post(':orderId/photos')
   @ApiOperation({ summary: 'Upload check-in photos for an order' })
-  @ApiResponse({ status: 201, description: 'Photos uploaded successfully' })
-  @ApiResponse({ status: 400, description: 'Validation error or order not in check-in status' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 201, description: 'Photos uploaded successfully', schema: { example: ok([EXAMPLE_CHECK_IN_PHOTO], 'Photos uploaded successfully') } })
+  @ApiResponse({ status: 400, description: 'Validation error or order not in check-in status', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
   uploadPhotos(
     @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
@@ -29,9 +36,9 @@ export class CheckInController {
 
   @Get(':orderId/photos')
   @ApiOperation({ summary: 'Get check-in photos for an order' })
-  @ApiResponse({ status: 200, description: 'Photos returned' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 200, description: 'Photos returned', schema: { example: ok([EXAMPLE_CHECK_IN_PHOTO]) } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
   getPhotos(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.checkInService.getPhotos(user.id, orderId);
   }

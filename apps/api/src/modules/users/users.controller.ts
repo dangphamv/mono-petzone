@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -64,7 +64,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User profile returned', schema: { example: ok(EXAMPLE_USER_PUBLIC) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 404, description: 'User not found', schema: { example: ERROR_404 } })
-  getById(@Param('id') id: string) {
+  getById(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getById(id);
   }
 }

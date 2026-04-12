@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -67,7 +67,7 @@ export class PetsController {
   @ApiResponse({ status: 200, description: 'Pet details returned', schema: { example: ok(EXAMPLE_PET) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 404, description: 'Pet not found', schema: { example: ERROR_404 } })
-  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  findOne(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.petsService.findOne(user.id, id);
   }
 
@@ -78,7 +78,7 @@ export class PetsController {
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 404, description: 'Pet not found', schema: { example: ERROR_404 } })
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(updatePetSchema)) body: UpdatePetDto) {
+  update(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body(new ZodValidationPipe(updatePetSchema)) body: UpdatePetDto) {
     return this.petsService.update(user.id, id, body);
   }
 
@@ -88,7 +88,7 @@ export class PetsController {
   @ApiResponse({ status: 200, description: 'Pet deleted successfully', schema: { example: ok({ id: EXAMPLE_PET.id, deleted: true }, 'Pet deleted successfully') } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 404, description: 'Pet not found', schema: { example: ERROR_404 } })
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.petsService.remove(user.id, id);
   }
 }

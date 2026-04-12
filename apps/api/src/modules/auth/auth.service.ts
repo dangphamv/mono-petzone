@@ -357,7 +357,10 @@ export class AuthService {
       app_metadata: { role: body.role },
     });
 
-    return data;
+    return {
+      ...data,
+      requires_provider_registration: body.role === 'provider',
+    };
   }
 
   async logout(userId: string) {

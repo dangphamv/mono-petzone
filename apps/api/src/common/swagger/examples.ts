@@ -96,11 +96,11 @@ export const EXAMPLE_USER = {
   social_provider: null,
   social_id: null,
   notification_preferences: {
-    push_order_status: true,
-    push_chat: true,
-    push_status_report: true,
-    push_promotion: false,
-    email_receipts: true,
+    order_status: true,
+    new_message: true,
+    status_report: true,
+    review: true,
+    promotion: false,
   },
   terms_accepted_at: PAST,
   last_login_at: NOW,
@@ -116,11 +116,11 @@ export const EXAMPLE_USER_PUBLIC = {
 };
 
 export const EXAMPLE_NOTIFICATION_PREFERENCES = {
-  push_order_status: true,
-  push_chat: true,
-  push_status_report: true,
-  push_promotion: false,
-  email_receipts: true,
+  order_status: true,
+  new_message: true,
+  status_report: true,
+  review: true,
+  promotion: false,
 };
 
 // ===== Auth =====

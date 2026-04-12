@@ -4,7 +4,7 @@ import type { Cache } from 'cache-manager';
 import { SupabaseService } from '../supabase/supabase.service';
 import { PET_COLUMNS, BREED_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
-import { PAGINATION } from '@petzone/shared';
+import { PAGINATION, PET_SPECIES } from '@petzone/shared';
 import type { CreatePetInput, UpdatePetInput } from '@petzone/validators';
 
 @Injectable()
@@ -52,6 +52,9 @@ export class PetsService {
   }
 
   async getBreeds(species: string) {
+    if (!(PET_SPECIES as readonly string[]).includes(species)) {
+      throw new BadRequestException(`Invalid species. Must be one of: ${PET_SPECIES.join(', ')}`);
+    }
     const cacheKey = `breeds:${species}`;
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -74,6 +77,7 @@ export class PetsService {
       .select(PET_COLUMNS)
       .eq('id', id)
       .eq('owner_id', userId)
+      .eq('is_active', true)
       .single();
 
     if (error || !data) throw new NotFoundException('Pet not found');
@@ -81,11 +85,16 @@ export class PetsService {
   }
 
   async update(userId: string, id: string, body: UpdatePetInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const { data, error } = await this.supabase.client
       .from('pets')
       .update(body)
       .eq('id', id)
       .eq('owner_id', userId)
+      .eq('is_active', true)
       .select(PET_COLUMNS)
       .single();
 
@@ -99,6 +108,7 @@ export class PetsService {
       .update({ is_active: false })
       .eq('id', id)
       .eq('owner_id', userId)
+      .eq('is_active', true)
       .select(PET_COLUMNS)
       .single();
 

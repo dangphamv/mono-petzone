@@ -35,6 +35,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (typeof body.error === 'string') {
           message = body.error;
         }
+        if (body.errors !== undefined) errors = body.errors;
       }
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);

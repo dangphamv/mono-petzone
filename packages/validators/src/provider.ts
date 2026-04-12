@@ -6,11 +6,11 @@ const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM
 )
 
 export const registerProviderSchema = z.object({
-  business_name: z.string().min(2).max(200),
-  description: z.string().max(2000).optional(),
-  license_number: z.string().max(100).optional(),
+  business_name: z.string().trim().min(2).max(200),
+  description: z.string().trim().max(2000).optional(),
+  license_number: z.string().trim().max(100).optional(),
   license_photos: z.array(z.string().url()).min(1).max(3),
-  address: z.string().min(5).max(500),
+  address: z.string().trim().min(5).max(500),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   phone: z.string().optional(),
@@ -25,8 +25,8 @@ export const registerProviderSchema = z.object({
 export const updateListingSchema = registerProviderSchema.partial()
 
 export const createRoomSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(500).optional(),
   capacity: z.number().int().positive().default(1),
   price_per_night: z.number().int().min(50000).max(10000000),
   photos: z.array(z.string().url()).max(5).default([]),
@@ -35,8 +35,8 @@ export const createRoomSchema = z.object({
 export const updateRoomSchema = createRoomSchema.partial()
 
 export const createAddOnSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(500).optional(),
   price: z.number().int().positive(),
   price_type: z.enum(['per_night', 'per_booking', 'per_pet']),
 })

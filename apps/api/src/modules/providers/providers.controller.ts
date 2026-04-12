@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Put, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Put, Query, ParseUUIDPipe } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
@@ -170,7 +170,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   @ApiResponse({ status: 404, description: 'Room not found', schema: { example: ERROR_404 } })
-  updateRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string, @Body(new ZodValidationPipe(updateRoomSchema)) body: UpdateRoomDto) {
+  updateRoom(@CurrentUser() user: AuthUser, @Param('roomId', ParseUUIDPipe) roomId: string, @Body(new ZodValidationPipe(updateRoomSchema)) body: UpdateRoomDto) {
     return this.providersService.updateRoom(user.id, roomId, body);
   }
 
@@ -181,7 +181,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   @ApiResponse({ status: 404, description: 'Room not found', schema: { example: ERROR_404 } })
-  deleteRoom(@CurrentUser() user: AuthUser, @Param('roomId') roomId: string) {
+  deleteRoom(@CurrentUser() user: AuthUser, @Param('roomId', ParseUUIDPipe) roomId: string) {
     return this.providersService.deleteRoom(user.id, roomId);
   }
 
@@ -214,7 +214,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   @ApiResponse({ status: 404, description: 'Add-on not found', schema: { example: ERROR_404 } })
-  updateAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string, @Body(new ZodValidationPipe(updateAddOnSchema)) body: UpdateAddOnDto) {
+  updateAddOn(@CurrentUser() user: AuthUser, @Param('addOnId', ParseUUIDPipe) addOnId: string, @Body(new ZodValidationPipe(updateAddOnSchema)) body: UpdateAddOnDto) {
     return this.providersService.updateAddOn(user.id, addOnId, body);
   }
 
@@ -225,7 +225,7 @@ export class ProvidersController {
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   @ApiResponse({ status: 404, description: 'Add-on not found', schema: { example: ERROR_404 } })
-  deleteAddOn(@CurrentUser() user: AuthUser, @Param('addOnId') addOnId: string) {
+  deleteAddOn(@CurrentUser() user: AuthUser, @Param('addOnId', ParseUUIDPipe) addOnId: string) {
     return this.providersService.deleteAddOn(user.id, addOnId);
   }
 
@@ -266,7 +266,7 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Get provider public profile' })
   @ApiResponse({ status: 200, description: 'Provider profile returned', schema: { example: ok(EXAMPLE_PROVIDER) } })
   @ApiResponse({ status: 404, description: 'Provider not found', schema: { example: ERROR_404 } })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.providersService.findOne(id);
   }
 
@@ -275,7 +275,7 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Get provider room types' })
   @ApiResponse({ status: 200, description: 'Rooms returned', schema: { example: ok([EXAMPLE_ROOM]) } })
   @ApiResponse({ status: 404, description: 'Provider not found', schema: { example: ERROR_404 } })
-  getPublicRooms(@Param('id') id: string) {
+  getPublicRooms(@Param('id', ParseUUIDPipe) id: string) {
     return this.providersService.getPublicRooms(id);
   }
 
@@ -284,7 +284,7 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Get provider add-on services' })
   @ApiResponse({ status: 200, description: 'Add-ons returned', schema: { example: ok([EXAMPLE_ADDON]) } })
   @ApiResponse({ status: 404, description: 'Provider not found', schema: { example: ERROR_404 } })
-  getPublicAddOns(@Param('id') id: string) {
+  getPublicAddOns(@Param('id', ParseUUIDPipe) id: string) {
     return this.providersService.getPublicAddOns(id);
   }
 }

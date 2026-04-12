@@ -83,33 +83,64 @@ export class ProvidersService {
   async getMe(userId: string) {
     const provider = await this.getProviderByUserId(userId);
 
-    const { data, error } = await this.supabase.client
-      .from('providers')
-      .select(`${PROVIDER_COLUMNS}, room_types(${ROOM_COLUMNS}), add_on_services(${ADDON_COLUMNS})`)
-      .eq('id', provider.id)
-      .single();
+    const [{ data, error }, { data: rooms }, { data: addons }] = await Promise.all([
+      this.supabase.client
+        .from('providers')
+        .select(PROVIDER_COLUMNS)
+        .eq('id', provider.id)
+        .single(),
+      this.supabase.client
+        .from('room_types')
+        .select(ROOM_COLUMNS)
+        .eq('provider_id', provider.id)
+        .eq('is_active', true),
+      this.supabase.client
+        .from('add_on_services')
+        .select(ADDON_COLUMNS)
+        .eq('provider_id', provider.id)
+        .eq('is_active', true),
+    ]);
 
     if (error || !data) throw new NotFoundException('Provider not found');
-    return data;
+    return { ...data, room_types: rooms ?? [], add_on_services: addons ?? [] };
   }
 
   async findOne(id: string) {
     const cached = await this.cache.get(this.providerCacheKey(id));
     if (cached) return cached;
 
-    const { data, error } = await this.supabase.client
-      .from('providers')
-      .select(`${PROVIDER_COLUMNS}, room_types(${ROOM_COLUMNS}), add_on_services(${ADDON_COLUMNS})`)
-      .eq('id', id)
-      .single();
+    const [{ data, error }, { data: rooms }, { data: addons }] = await Promise.all([
+      this.supabase.client
+        .from('providers')
+        .select(PROVIDER_COLUMNS)
+        .eq('id', id)
+        .eq('verification_status', 'approved')
+        .eq('is_active', true)
+        .single(),
+      this.supabase.client
+        .from('room_types')
+        .select(ROOM_COLUMNS)
+        .eq('provider_id', id)
+        .eq('is_active', true),
+      this.supabase.client
+        .from('add_on_services')
+        .select(ADDON_COLUMNS)
+        .eq('provider_id', id)
+        .eq('is_active', true),
+    ]);
 
     if (error || !data) throw new NotFoundException('Provider not found');
 
-    await this.cache.set(this.providerCacheKey(id), data, PROVIDER_CACHE_TTL);
-    return data;
+    const result = { ...data, room_types: rooms ?? [], add_on_services: addons ?? [] };
+    await this.cache.set(this.providerCacheKey(id), result, PROVIDER_CACHE_TTL);
+    return result;
   }
 
   async updateMe(userId: string, body: UpdateListingInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const provider = await this.getProviderByUserId(userId);
 
     const { data, error } = await this.supabase.client
@@ -131,6 +162,10 @@ export class ProvidersService {
     if (body.license_photos) updates.license_photos = body.license_photos;
     if (body.facility_photos) updates.facility_photos = body.facility_photos;
     if (body.certification_photos) updates.certification_photos = body.certification_photos;
+
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException('No documents to upload');
+    }
 
     const { data, error } = await this.supabase.client
       .from('providers')
@@ -226,7 +261,21 @@ export class ProvidersService {
     };
   }
 
+  private async assertPublicProviderExists(providerId: string) {
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .select('id')
+      .eq('id', providerId)
+      .eq('verification_status', 'approved')
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) throw new NotFoundException('Provider not found');
+  }
+
   async getPublicRooms(providerId: string) {
+    await this.assertPublicProviderExists(providerId);
+
     const { data, error } = await this.supabase.client
       .from('room_types')
       .select(ROOM_COLUMNS)
@@ -239,6 +288,8 @@ export class ProvidersService {
   }
 
   async getPublicAddOns(providerId: string) {
+    await this.assertPublicProviderExists(providerId);
+
     const { data, error } = await this.supabase.client
       .from('add_on_services')
       .select(ADDON_COLUMNS)
@@ -279,6 +330,10 @@ export class ProvidersService {
   }
 
   async updateRoom(userId: string, roomId: string, body: UpdateRoomInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const provider = await this.getProviderByUserId(userId);
 
     const { data, error } = await this.supabase.client
@@ -286,6 +341,7 @@ export class ProvidersService {
       .update(body)
       .eq('id', roomId)
       .eq('provider_id', provider.id)
+      .eq('is_active', true)
       .select(ROOM_COLUMNS)
       .single();
 
@@ -302,6 +358,7 @@ export class ProvidersService {
       .update({ is_active: false })
       .eq('id', roomId)
       .eq('provider_id', provider.id)
+      .eq('is_active', true)
       .select(ROOM_COLUMNS)
       .single();
 
@@ -339,6 +396,10 @@ export class ProvidersService {
   }
 
   async updateAddOn(userId: string, addOnId: string, body: UpdateAddOnInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const provider = await this.getProviderByUserId(userId);
 
     const { data, error } = await this.supabase.client
@@ -346,6 +407,7 @@ export class ProvidersService {
       .update(body)
       .eq('id', addOnId)
       .eq('provider_id', provider.id)
+      .eq('is_active', true)
       .select(ADDON_COLUMNS)
       .single();
 
@@ -362,6 +424,7 @@ export class ProvidersService {
       .update({ is_active: false })
       .eq('id', addOnId)
       .eq('provider_id', provider.id)
+      .eq('is_active', true)
       .select(ADDON_COLUMNS)
       .single();
 

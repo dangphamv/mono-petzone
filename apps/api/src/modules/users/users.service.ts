@@ -19,6 +19,10 @@ export class UsersService {
   }
 
   async updateMe(userId: string, body: UpdateProfileInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
     const { data, error } = await this.supabase.client
       .from('users')
       .update({ ...body, updated_at: new Date().toISOString() })

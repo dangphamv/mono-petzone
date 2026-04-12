@@ -7,6 +7,17 @@ import { PAGINATION } from '@petzone/shared';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto';
+import {
+  ok,
+  okPaginated,
+  EXAMPLE_CHAT_CONVERSATION,
+  EXAMPLE_CHAT_MESSAGE,
+  EXAMPLE_MARK_READ,
+  ERROR_400,
+  ERROR_401,
+  ERROR_403,
+  ERROR_404,
+} from '../../common/swagger/examples';
 
 @ApiTags('Chat')
 @ApiBearerAuth('access-token')
@@ -16,8 +27,8 @@ export class ChatController {
 
   @Get('conversations')
   @ApiOperation({ summary: 'List conversations for current user' })
-  @ApiResponse({ status: 200, description: 'Conversations returned' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 200, description: 'Conversations returned', schema: { example: okPaginated([EXAMPLE_CHAT_CONVERSATION], 'Conversations returned', 5) } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   getConversations(
     @CurrentUser() user: AuthUser,
     @Query('page') page?: string,
@@ -31,10 +42,10 @@ export class ChatController {
 
   @Get('conversations/:id/messages')
   @ApiOperation({ summary: 'Get messages in a conversation' })
-  @ApiResponse({ status: 200, description: 'Messages returned' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Not a participant of this conversation' })
-  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  @ApiResponse({ status: 200, description: 'Messages returned', schema: { example: okPaginated([EXAMPLE_CHAT_MESSAGE], 'Messages returned', 38) } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Not a participant of this conversation', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Conversation not found', schema: { example: ERROR_404 } })
   getMessages(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -49,11 +60,11 @@ export class ChatController {
 
   @Post('conversations/:id/messages')
   @ApiOperation({ summary: 'Send a message in a conversation' })
-  @ApiResponse({ status: 201, description: 'Message sent' })
-  @ApiResponse({ status: 400, description: 'Validation error' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Not a participant of this conversation' })
-  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  @ApiResponse({ status: 201, description: 'Message sent', schema: { example: ok(EXAMPLE_CHAT_MESSAGE, 'Message sent') } })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Not a participant of this conversation', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Conversation not found', schema: { example: ERROR_404 } })
   sendMessage(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -64,9 +75,9 @@ export class ChatController {
 
   @Patch('conversations/:id/read')
   @ApiOperation({ summary: 'Mark conversation as read' })
-  @ApiResponse({ status: 200, description: 'Conversation marked as read' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  @ApiResponse({ status: 200, description: 'Conversation marked as read', schema: { example: ok(EXAMPLE_MARK_READ, 'Conversation marked as read') } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Conversation not found', schema: { example: ERROR_404 } })
   markRead(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.chatService.markRead(user.id, id);
   }

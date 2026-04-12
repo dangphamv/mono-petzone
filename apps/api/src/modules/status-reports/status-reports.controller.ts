@@ -6,6 +6,14 @@ import { createStatusReportSchema, reactStatusReportSchema, replyStatusReportSch
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { StatusReportsService } from './status-reports.service';
 import { CreateStatusReportDto, ReactStatusReportDto, ReplyStatusReportDto } from './dto';
+import {
+  ok,
+  EXAMPLE_STATUS_REPORT,
+  ERROR_400,
+  ERROR_401,
+  ERROR_403,
+  ERROR_404,
+} from '../../common/swagger/examples';
 
 @ApiTags('Status Reports')
 @ApiBearerAuth('access-token')
@@ -15,11 +23,11 @@ export class StatusReportsController {
 
   @Post(':orderId')
   @ApiOperation({ summary: 'Create a daily status report' })
-  @ApiResponse({ status: 201, description: 'Status report created' })
-  @ApiResponse({ status: 400, description: 'Validation error' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Only the provider can create status reports' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 201, description: 'Status report created', schema: { example: ok(EXAMPLE_STATUS_REPORT, 'Status report created') } })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Only the provider can create status reports', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
   create(
     @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
@@ -30,18 +38,18 @@ export class StatusReportsController {
 
   @Get(':orderId')
   @ApiOperation({ summary: 'List status reports for an order' })
-  @ApiResponse({ status: 200, description: 'Status reports returned' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 200, description: 'Status reports returned', schema: { example: ok([EXAMPLE_STATUS_REPORT]) } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
   findAll(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.statusReportsService.findAll(user.id, orderId);
   }
 
   @Get(':orderId/:reportId')
   @ApiOperation({ summary: 'Get a specific status report' })
-  @ApiResponse({ status: 200, description: 'Status report returned' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Report not found' })
+  @ApiResponse({ status: 200, description: 'Status report returned', schema: { example: ok(EXAMPLE_STATUS_REPORT) } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Report not found', schema: { example: ERROR_404 } })
   findOne(
     @CurrentUser() user: AuthUser,
     @Param('orderId') orderId: string,
@@ -52,10 +60,10 @@ export class StatusReportsController {
 
   @Post(':id/react')
   @ApiOperation({ summary: 'React to a status report (owner only)' })
-  @ApiResponse({ status: 201, description: 'Reaction saved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Only the owner can react' })
-  @ApiResponse({ status: 404, description: 'Report not found' })
+  @ApiResponse({ status: 201, description: 'Reaction saved', schema: { example: ok({ ...EXAMPLE_STATUS_REPORT, owner_reaction: 'love' }, 'Reaction saved') } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Only the owner can react', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Report not found', schema: { example: ERROR_404 } })
   react(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -66,10 +74,10 @@ export class StatusReportsController {
 
   @Post(':id/reply')
   @ApiOperation({ summary: 'Reply to a status report (owner only)' })
-  @ApiResponse({ status: 201, description: 'Reply saved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Only the owner can reply' })
-  @ApiResponse({ status: 404, description: 'Report not found' })
+  @ApiResponse({ status: 201, description: 'Reply saved', schema: { example: ok(EXAMPLE_STATUS_REPORT, 'Reply saved') } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Only the owner can reply', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Report not found', schema: { example: ERROR_404 } })
   reply(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,

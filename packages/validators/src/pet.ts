@@ -15,9 +15,9 @@ const medicationSchema = z.object({
 })
 
 export const createPetSchema = z.object({
-  name: z.string().min(1).max(100),
+  name: z.string().trim().min(1).max(100),
   species: z.enum(['dog', 'cat', 'other']),
-  breed: z.string().max(100).optional(),
+  breed: z.string().trim().max(100).optional(),
   gender: z.enum(['male', 'female', 'unknown']),
   date_of_birth: z.string().optional(),
   weight_kg: z.number().positive().max(200).optional(),

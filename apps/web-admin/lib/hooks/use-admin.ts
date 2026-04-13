@@ -52,7 +52,7 @@ function buildQuery(base: string, params: TableQueryParams = {}): string {
 export function useDashboard() {
   return useQuery<DashboardData>({
     queryKey: ['admin', 'dashboard'],
-    queryFn: () => api('/admin/dashboard'),
+    queryFn: async () => (await api<{ data: DashboardData }>('/admin/dashboard')).data,
   })
 }
 
@@ -136,7 +136,7 @@ export function useModerateReview() {
 export function useAnalytics() {
   return useQuery<AnalyticsData>({
     queryKey: ['admin', 'analytics'],
-    queryFn: () => api('/admin/analytics'),
+    queryFn: async () => (await api<{ data: AnalyticsData }>('/admin/analytics')).data,
     staleTime: 300_000,
   })
 }
@@ -144,7 +144,7 @@ export function useAnalytics() {
 export function useConfig() {
   return useQuery<ConfigData>({
     queryKey: ['admin', 'config'],
-    queryFn: () => api('/admin/config'),
+    queryFn: async () => (await api<{ data: ConfigData }>('/admin/config')).data,
     staleTime: 600_000,
   })
 }

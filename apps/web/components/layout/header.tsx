@@ -19,6 +19,7 @@ export function Header({ dict, locale }: { dict: Dictionary['header']; locale: L
     { path: '/about', label: dict.about },
     { path: '/for-providers', label: dict.forProviders },
     { path: '/pricing', label: dict.pricing },
+    { path: '/faq', label: dict.faq },
     { path: '/contact', label: dict.contact },
   ]
 

@@ -55,7 +55,9 @@ export function Hero({ dict, locale }: { dict: Dictionary['hero']; locale: Local
           </a>
         </div>
 
+        {(dict.rating || dict.petServed || dict.partnerHotels) && (
         <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-text-secondary">
+          {dict.rating && (
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1">
               {[...Array(5)].map((_, i) => (
@@ -64,11 +66,21 @@ export function Hero({ dict, locale }: { dict: Dictionary['hero']; locale: Local
             </div>
             <span className="font-medium">{dict.rating}</span>
           </div>
+          )}
+          {dict.petServed && (
+          <>
           <div className="h-4 w-px bg-gray-300" />
-          <span><strong className="text-text">10,000+</strong> {dict.petServed}</span>
+          <span><strong className="text-text">{dict.petServed}</strong></span>
+          </>
+          )}
+          {dict.partnerHotels && (
+          <>
           <div className="h-4 w-px bg-gray-300" />
-          <span><strong className="text-text">500+</strong> {dict.partnerHotels}</span>
+          <span><strong className="text-text">{dict.partnerHotels}</strong></span>
+          </>
+          )}
         </div>
+        )}
       </div>
     </section>
   )

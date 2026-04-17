@@ -14,9 +14,17 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
 
   return (
     <section className="py-20">
-      <div className="mx-auto max-w-3xl px-4 prose">
+      <div className="mx-auto max-w-3xl px-4">
         <h1 className="font-heading text-4xl font-bold text-text">{dict.privacyPage.title}</h1>
-        <p className="mt-6 text-text-secondary">{dict.privacyPage.placeholder}</p>
+        <p className="mt-2 text-sm text-text-secondary">{dict.privacyPage.lastUpdated}</p>
+        <div className="mt-10 space-y-8">
+          {dict.privacyPage.sections.map((s) => (
+            <div key={s.heading}>
+              <h2 className="font-heading text-xl font-bold text-text">{s.heading}</h2>
+              <p className="mt-3 leading-relaxed text-text-secondary">{s.content}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

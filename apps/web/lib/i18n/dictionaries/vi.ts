@@ -1,6 +1,6 @@
 export interface Dictionary {
   metadata: { title: string; description: string }
-  header: { about: string; forProviders: string; pricing: string; contact: string; faq: string; download: string }
+  header: { about: string; forProviders: string; pricing: string; contact: string; faq: string; blog: string; download: string }
   hero: {
     badge: string; titleLine1: string; titleLine2: string; subtitle: string
     ctaPrimary: string; ctaSecondary: string; rating: string; petServed: string; partnerHotels: string
@@ -45,6 +45,11 @@ export interface Dictionary {
     ownerLabel: string; providerLabel: string
     items: readonly { question: string; answer: string; category: 'owner' | 'provider' }[]
   }
+  blogPage: {
+    metaTitle: string; metaDescription: string; title: string; subtitle: string
+    readMore: string; minRead: string
+    posts: readonly { slug: string; title: string; excerpt: string; date: string; readTime: string; category: string }[]
+  }
 }
 
 const vi: Dictionary = {
@@ -58,6 +63,7 @@ const vi: Dictionary = {
     pricing: 'Bảng giá',
     contact: 'Liên hệ',
     faq: 'FAQ',
+    blog: 'Blog',
     download: 'Tải ứng dụng',
   },
   hero: {
@@ -238,6 +244,19 @@ const vi: Dictionary = {
       { question: 'Phí hoa hồng là bao nhiêu?', answer: '15% trên mỗi đơn hàng hoàn thành. Không phí đăng ký, không phí duy trì hàng tháng. Ưu đãi ra mắt: 0% hoa hồng trong 3 tháng đầu tiên cho đối tác mới.', category: 'provider' },
       { question: 'Tôi nhận thanh toán khi nào?', answer: 'Sau khi dịch vụ hoàn tất và boss được trả về cho chủ nuôi. Tiền được chuyển vào tài khoản ngân hàng của bạn sau khi trừ hoa hồng.', category: 'provider' },
       { question: 'Tôi có thể từ chối đơn đặt phòng không?', answer: 'Có, nhưng cần nêu lý do rõ ràng. Nếu không phản hồi trong 4 giờ, đơn tự động hủy. Tỷ lệ từ chối cao sẽ ảnh hưởng đến thứ hạng hiển thị của bạn trên PetZone.', category: 'provider' },
+    ],
+  },
+  blogPage: {
+    metaTitle: 'Blog — PetZone',
+    metaDescription: 'Mẹo chăm sóc thú cưng, hướng dẫn gửi boss đi khách sạn, và tin tức từ PetZone.',
+    title: 'Blog PetZone',
+    subtitle: 'Mẹo chăm sóc boss, hướng dẫn gửi thú cưng, và tin tức mới nhất.',
+    readMore: 'Đọc tiếp',
+    minRead: 'phút đọc',
+    posts: [
+      { slug: 'cach-chon-khach-san-thu-cung-uy-tin', title: 'Cách chọn khách sạn thú cưng uy tín tại HCMC', excerpt: 'Gửi boss đi khách sạn lần đầu? Đây là 6 tiêu chí giúp bạn chọn nơi tốt nhất — từ giấy phép, đánh giá, đến quy trình báo cáo hàng ngày.', date: '2026-04-15', readTime: '5', category: 'Hướng dẫn' },
+      { slug: 'checklist-gui-boss-di-khach-san', title: 'Checklist chuẩn bị cho boss trước khi gửi khách sạn', excerpt: 'Sổ tiêm chủng, đồ dùng quen thuộc, thông tin sức khỏe — đừng quên 5 điều quan trọng này trước khi drop-off boss.', date: '2026-04-14', readTime: '3', category: 'Mẹo hay' },
+      { slug: '5-sai-lam-khi-gui-thu-cung-lan-dau', title: '5 sai lầm phổ biến khi gửi thú cưng lần đầu', excerpt: 'Nhiều sen mắc những lỗi này khi gửi boss lần đầu — từ quên sổ vaccine đến không kiểm tra cơ sở trước. Đọc để tránh nhé!', date: '2026-04-13', readTime: '4', category: 'Mẹo hay' },
     ],
   },
 }

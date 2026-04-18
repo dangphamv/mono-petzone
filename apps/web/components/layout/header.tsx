@@ -20,6 +20,7 @@ export function Header({ dict, locale }: { dict: Dictionary['header']; locale: L
     { path: '/for-providers', label: dict.forProviders },
     { path: '/pricing', label: dict.pricing },
     { path: '/faq', label: dict.faq },
+    { path: '/blog', label: dict.blog },
     { path: '/contact', label: dict.contact },
   ]
 

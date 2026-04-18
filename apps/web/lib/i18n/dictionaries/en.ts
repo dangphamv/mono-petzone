@@ -11,6 +11,7 @@ const en: Dictionary = {
     pricing: 'Pricing',
     contact: 'Contact',
     faq: 'FAQ',
+    blog: 'Blog',
     download: 'Download App',
   },
   hero: {
@@ -191,6 +192,19 @@ const en: Dictionary = {
       { question: 'What is the commission rate?', answer: '15% on each completed booking. No signup fee, no monthly fee. Launch offer: 0% commission for the first 3 months for new partners.', category: 'provider' },
       { question: 'When do I get paid?', answer: 'After the service is completed and the pet is returned to the owner. Funds are transferred to your bank account after commission is deducted.', category: 'provider' },
       { question: 'Can I decline a booking request?', answer: 'Yes, but you need to provide a clear reason. If you don\'t respond within 4 hours, the booking is automatically cancelled. A high decline rate will affect your search ranking on PetZone.', category: 'provider' },
+    ],
+  },
+  blogPage: {
+    metaTitle: 'Blog — PetZone',
+    metaDescription: 'Pet care tips, boarding guides, and news from PetZone.',
+    title: 'PetZone Blog',
+    subtitle: 'Pet care tips, boarding guides, and the latest news.',
+    readMore: 'Read more',
+    minRead: 'min read',
+    posts: [
+      { slug: 'how-to-choose-trusted-pet-hotel', title: 'How to Choose a Trusted Pet Hotel in HCMC', excerpt: 'First time boarding your pet? Here are 6 criteria to help you pick the best place — from licenses and reviews to daily reporting.', date: '2026-04-15', readTime: '5', category: 'Guide' },
+      { slug: 'boarding-checklist-for-pet-owners', title: 'Boarding Checklist: What to Prepare Before Drop-off', excerpt: 'Vaccination records, familiar items, health info — don\'t forget these 5 essentials before dropping off your pet.', date: '2026-04-14', readTime: '3', category: 'Tips' },
+      { slug: '5-common-mistakes-first-time-boarding', title: '5 Common Mistakes When Boarding Your Pet for the First Time', excerpt: 'Many pet parents make these errors on their first boarding experience — from forgetting vaccine records to not checking the facility. Read to avoid them!', date: '2026-04-13', readTime: '4', category: 'Tips' },
     ],
   },
 }

@@ -59,8 +59,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
           <h1 className="mt-6 font-heading text-3xl font-bold text-text md:text-4xl">{post.title}</h1>
           <p className="mt-6 text-lg leading-relaxed text-text-secondary">{post.excerpt}</p>
 
-          <div className="mt-8 rounded-2xl bg-primary/5 p-6 text-text-secondary">
-            <p>Bài viết đầy đủ đang được chuẩn bị. Theo dõi PetZone để đọc nội dung chi tiết.</p>
+          <div className="mt-8 prose prose-lg max-w-none">
+            {post.body.map((paragraph, i) => (
+              <div key={i} className="whitespace-pre-line">
+                {paragraph.split('\n\n').map((p, j) => (
+                  <p key={j} className={j === 0 && paragraph.includes('\n\n') ? 'font-heading text-xl font-bold text-text mt-8' : 'mt-4 text-text-secondary leading-relaxed'}>
+                    {p}
+                  </p>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </div>

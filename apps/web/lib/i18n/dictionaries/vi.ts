@@ -47,8 +47,8 @@ export interface Dictionary {
   }
   blogPage: {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
-    readMore: string; minRead: string
-    posts: readonly { slug: string; title: string; excerpt: string; date: string; readTime: string; category: string }[]
+    readMore: string; minRead: string; fullArticlePlaceholder: string
+    posts: readonly { slug: string; title: string; excerpt: string; date: string; readTime: string; category: string; body: readonly string[] }[]
   }
 }
 
@@ -253,10 +253,64 @@ const vi: Dictionary = {
     subtitle: 'Mẹo chăm sóc boss, hướng dẫn gửi thú cưng, và tin tức mới nhất.',
     readMore: 'Đọc tiếp',
     minRead: 'phút đọc',
+    fullArticlePlaceholder: '',
     posts: [
-      { slug: 'cach-chon-khach-san-thu-cung-uy-tin', title: 'Cách chọn khách sạn thú cưng uy tín tại HCMC', excerpt: 'Gửi boss đi khách sạn lần đầu? Đây là 6 tiêu chí giúp bạn chọn nơi tốt nhất — từ giấy phép, đánh giá, đến quy trình báo cáo hàng ngày.', date: '2026-04-15', readTime: '5', category: 'Hướng dẫn' },
-      { slug: 'checklist-gui-boss-di-khach-san', title: 'Checklist chuẩn bị cho boss trước khi gửi khách sạn', excerpt: 'Sổ tiêm chủng, đồ dùng quen thuộc, thông tin sức khỏe — đừng quên 5 điều quan trọng này trước khi drop-off boss.', date: '2026-04-14', readTime: '3', category: 'Mẹo hay' },
-      { slug: '5-sai-lam-khi-gui-thu-cung-lan-dau', title: '5 sai lầm phổ biến khi gửi thú cưng lần đầu', excerpt: 'Nhiều sen mắc những lỗi này khi gửi boss lần đầu — từ quên sổ vaccine đến không kiểm tra cơ sở trước. Đọc để tránh nhé!', date: '2026-04-13', readTime: '4', category: 'Mẹo hay' },
+      {
+        slug: 'cach-chon-khach-san-thu-cung-uy-tin',
+        title: 'Cách chọn khách sạn thú cưng uy tín tại HCMC',
+        excerpt: 'Gửi boss đi khách sạn lần đầu? Đây là 6 tiêu chí giúp bạn chọn nơi tốt nhất — từ giấy phép, đánh giá, đến quy trình báo cáo hàng ngày.',
+        date: '2026-04-15',
+        readTime: '5',
+        category: 'Hướng dẫn',
+        body: [
+          'Gửi boss đi khách sạn lần đầu? Bạn không đơn độc.\n\nHàng nghìn sen tại Sài Gòn cũng từng lo lắng y như vậy. Một nghiên cứu năm 2021 trên tạp chí Nature Scientific Reports cho thấy 50-80% chó có biểu hiện stress khi xa chủ: sủa nhiều, bỏ ăn, đi vệ sinh không đúng chỗ. Nhưng chọn đúng khách sạn giảm được phần lớn tình trạng này. Dưới đây là 6 tiêu chí giúp bạn chọn nơi gửi boss tốt nhất.',
+          '1. Giấy phép kinh doanh: hỏi thẳng, không ngại\n\nBước đầu tiên, cũng là bước quan trọng nhất. Khách sạn thú cưng hợp pháp tại Việt Nam cần giấy phép kinh doanh do Sở Kế hoạch và Đầu tư cấp. Hỏi trực tiếp. Nơi uy tín sẽ sẵn sàng cho bạn xem. Kiểm tra thêm trên Google Maps xem có địa chỉ cố định, số điện thoại, và đánh giá không. Nếu khách sạn từ chối cho xem giấy phép hoặc không có địa chỉ cố định? Tìm nơi khác.',
+          '2. Đến tận nơi, nhìn tận mắt\n\nẢnh trên mạng có thể đẹp. Thực tế có thể khác. Không có gì thay thế được việc đến thăm cơ sở trước khi đặt. Khi đến, chú ý: Mùi — sạch sẽ, không hôi nồng nặc. Không gian — phòng đủ rộng để boss đứng, xoay người, nằm thoải mái (tối thiểu 1.5m² cho chó trung bình). Ánh sáng và thông gió — có cửa sổ hoặc hệ thống thông gió, có điều hòa. Ở HCMC, điều hòa là bắt buộc. Khu vực chơi — có sân chơi riêng hoặc khu vận động ngoài trời.',
+          '3. Bao nhiêu nhân viên cho bao nhiêu boss?\n\nYếu tố này nhiều sen bỏ qua. Nhưng nó quan trọng. Một nghiên cứu trên tạp chí Applied Animal Behaviour Science đo mức cortisol (hormone stress) ở chó trong các cơ sở lưu trú. Kết quả: chó được chăm sóc với tỷ lệ nhân viên/chó thấp có mức cortisol thấp hơn rõ rệt. Tỷ lệ lý tưởng: 1 nhân viên cho 10-15 chó ban ngày, 1 cho 20-30 ban đêm. Với mèo: 1 cho 15-20. Hỏi thẳng: "Có bao nhiêu nhân viên chăm sóc vào ban đêm?" Nếu câu trả lời là "không có ai," bạn nên lo.',
+          '4. Vaccine: không có thì không nhận\n\nKhách sạn uy tín sẽ yêu cầu bằng chứng tiêm vaccine trước khi nhận boss. Nếu họ không hỏi, đó là dấu hiệu họ không quan tâm đến sức khỏe cộng đồng thú cưng. Chó cần: vaccine 5 bệnh (DHPPL) và vaccine dại. Mèo cần: vaccine 3 bệnh (FVRCP) và vaccine dại. Vaccine cần tiêm ít nhất 2 tuần trước khi gửi để có hiệu lực. WOAH xếp Việt Nam vào nhóm quốc gia có nguy cơ cao về bệnh dại.',
+          '5. Họ có gửi ảnh boss cho bạn mỗi ngày không?\n\nMột khảo sát từ tạp chí Veterinary Record cho thấy chủ nuôi nhận cập nhật thường xuyên về thú cưng trong thời gian gửi có mức lo lắng thấp hơn 60% so với những người không nhận được gì. Khách sạn tốt sẽ gửi ảnh hoặc video boss hàng ngày, có kênh liên lạc trực tiếp, thông báo ngay nếu boss có vấn đề sức khỏe, và có quy trình xử lý khẩn cấp rõ ràng. Câu hỏi bạn nên hỏi: "Nếu boss bị ốm lúc 2 giờ sáng, quy trình xử lý như thế nào?"',
+          '6. Đánh giá online: đọc kỹ, đừng chỉ đếm sao\n\nĐánh giá online là nguồn thông tin quý, nhưng cần biết cách đọc. Đánh giá đáng tin có ảnh thật kèm theo, mô tả chi tiết trải nghiệm cụ thể, có cả tích cực lẫn tiêu cực, và khách sạn phản hồi đánh giá tiêu cực một cách chuyên nghiệp. Cảnh giác với đánh giá toàn 5 sao không có nội dung, nhiều đánh giá trong cùng một ngày, hoặc không có ảnh thật nào.',
+          'Checklist nhanh trước khi quyết định: Có giấy phép kinh doanh hợp lệ. Cơ sở sạch sẽ, thoáng mát, đủ không gian. Tỷ lệ nhân viên/thú cưng hợp lý. Yêu cầu vaccine trước khi nhận. Có quy trình báo cáo và liên lạc rõ ràng. Có đánh giá tốt từ khách hàng thật. Đảm bảo khách sạn đáp ứng ít nhất 5/6 tiêu chí.',
+          'PetZone giúp bạn bỏ qua bước kiểm tra thủ công. Mọi khách sạn trên nền tảng đã được xác minh giấy phép, kiểm tra cơ sở, và có hệ thống ảnh check-in, báo cáo hàng ngày, chat trực tiếp tích hợp sẵn.',
+        ],
+      },
+      {
+        slug: 'checklist-gui-boss-di-khach-san',
+        title: 'Checklist chuẩn bị cho boss trước khi gửi khách sạn',
+        excerpt: 'Sổ tiêm chủng, đồ dùng quen thuộc, thông tin sức khỏe — đừng quên 5 điều quan trọng này trước khi drop-off boss.',
+        date: '2026-04-14',
+        readTime: '3',
+        category: 'Mẹo hay',
+        body: [
+          'Bạn đã chọn được khách sạn uy tín, đặt phòng xong, ngày drop-off đang đến gần. Nhưng khoan. Bạn đã chuẩn bị đủ chưa?\n\nMình từng thấy sen quên mang sổ vaccine rồi phải quay về lấy. Có sen không báo cho khách sạn biết boss bị dị ứng gà. Kết quả? Boss bị tiêu chảy ngày đầu tiên. Đây là 7 điều bạn cần chuẩn bị, dựa trên khuyến nghị từ bác sĩ thú y và kinh nghiệm thực tế.',
+          '1. Sổ tiêm chủng (bắt buộc, không có không nhận)\n\nThứ quan trọng nhất. Hầu hết khách sạn thú cưng tại HCMC yêu cầu boss phải tiêm đầy đủ vaccine. Chó cần vaccine 5 bệnh (DHPPL) và vaccine dại. Mèo cần vaccine 3 bệnh (FVRCP) và vaccine dại. Một điều nhiều sen không biết: vaccine cần ít nhất 14 ngày để cơ thể boss tạo đủ kháng thể. Tiêm hôm nay, gửi ngày mai là chưa có tác dụng.',
+          '2. Đồ dùng quen thuộc (giảm stress thật sự)\n\nĐây không phải mẹo vặt. Có khoa học đằng sau. Một nghiên cứu từ Đại học Bristol (Anh) đo mức cortisol ở chó trong môi trường mới. Chó có đồ vật quen thuộc từ nhà có mức cortisol thấp hơn 30% so với chó không có. Nên mang: chăn hoặc áo cũ có mùi của bạn, 1-2 đồ chơi yêu thích, bát ăn riêng nếu boss kén ăn. Không nên mang: đồ chơi có phần nhỏ dễ nuốt, dây thừng dài, đồ có giá trị cao.',
+          '3. Thông tin sức khỏe đặc biệt (viết ra giấy, đừng chỉ nói miệng)\n\nĐiều nhiều sen quên nhất. Bạn cần thông báo cho khách sạn: dị ứng thức ăn hoặc môi trường, thuốc đang uống (tên thuốc, liều lượng, giờ uống), bệnh mãn tính, hành vi đặc biệt (sợ tiếng ồn lớn, hung dữ với chó lạ, hay cắn khi sợ). Viết tất cả ra giấy hoặc ghi chú trên điện thoại. Nhân viên tiếp nhận có thể quên nếu bạn chỉ nói miệng lúc drop-off.',
+          '4. Thức ăn quen thuộc (đừng để boss đau bụng ngày đầu)\n\nThay đổi thức ăn đột ngột gây rối loạn tiêu hóa. AVMA khuyến nghị chuyển đổi thức ăn từ từ trong 7-10 ngày. Gửi boss 2-3 ngày mà đổi thức ăn hoàn toàn? Công thức cho tiêu chảy. Mang theo đủ thức ăn cho toàn bộ thời gian gửi cộng 1 ngày dự phòng. Chia sẵn theo bữa trong túi zip riêng. Ghi rõ lượng mỗi bữa.',
+          '5. Hai số điện thoại liên hệ khẩn cấp\n\nNgoài số của bạn, cung cấp thêm số của 1 người thân có thể liên hệ nếu bạn không nghe máy, và số bác sĩ thú y quen của boss. Tại sao cần số thứ hai? Vì bạn có thể đang trên máy bay, trong cuộc họp, hoặc ở nơi không có sóng. Trong trường hợp khẩn cấp, khách sạn cần liên hệ được ai đó ngay lập tức. 15 phút chờ đợi có thể là quá lâu.',
+          '6. Tập cho boss quen dần (nếu lần đầu)\n\nĐừng đợi đến ngày gửi mới bắt đầu. Royal Veterinary College (Anh) công bố nghiên cứu năm 2025 cho thấy chó được tập quen dần với việc xa chủ có biểu hiện stress ít hơn rõ rệt. 1-2 tuần trước: để boss ở nhà một mình 1-2 giờ mỗi ngày. 1 tuần trước: nếu có thể, đưa boss đến khách sạn thăm 30 phút. Ngày gửi: giữ bình tĩnh khi drop-off. Boss cảm nhận được cảm xúc của bạn.',
+          '7. Kiểm tra lại thông tin đặt phòng\n\nTrước ngày drop-off, xác nhận lại: ngày check-in và check-out, giờ drop-off và pick-up, dịch vụ thêm đã đặt (tắm, cắt tỉa, cho uống thuốc), chính sách hủy và phí phát sinh nếu pick-up muộn.',
+          'Với PetZone, bạn gửi tất cả thông tin sức khỏe và yêu cầu đặc biệt ngay trong app khi đặt phòng. Khách sạn nhận được đầy đủ trước khi boss đến.',
+        ],
+      },
+      {
+        slug: '5-sai-lam-khi-gui-thu-cung-lan-dau',
+        title: '5 sai lầm phổ biến khi gửi thú cưng lần đầu',
+        excerpt: 'Nhiều sen mắc những lỗi này khi gửi boss lần đầu — từ quên sổ vaccine đến không kiểm tra cơ sở trước. Đọc để tránh nhé!',
+        date: '2026-04-13',
+        readTime: '4',
+        category: 'Mẹo hay',
+        body: [
+          'Gửi boss đi khách sạn lần đầu là trải nghiệm đầy lo lắng. Cho cả sen lẫn boss.\n\nVà thật không may, nhiều sen mắc những sai lầm có thể tránh được. Mình tổng hợp 5 sai lầm phổ biến nhất, dựa trên dữ liệu từ các khách sạn thú cưng và nghiên cứu về hành vi động vật.',
+          'Sai lầm 1: Chọn khách sạn chỉ qua ảnh trên mạng\n\nSai lầm phổ biến nhất. Nhiều sen chọn nơi gửi boss chỉ dựa trên ảnh đẹp trên Facebook hoặc giá rẻ, mà không đến tận nơi kiểm tra. Ảnh trên mạng có thể đã cũ hoặc được chỉnh sửa. Một khảo sát từ Whole Dog Journal cho thấy 40% chủ nuôi không hài lòng với dịch vụ boarding đã không thăm cơ sở trước khi đặt. Cách tránh: luôn đến thăm ít nhất 1 lần. Chú ý mùi, tiếng ồn, ánh sáng, cách nhân viên đối xử với thú cưng.',
+          'Sai lầm 2: Quên mang sổ tiêm chủng\n\nBạn sẽ ngạc nhiên khi biết có bao nhiêu sen đến drop-off mà quên mang sổ vaccine. Kết quả: khách sạn từ chối nhận boss, kế hoạch đi công tác bị ảnh hưởng. WOAH xếp Việt Nam vào nhóm quốc gia có nguy cơ cao về bệnh dại. Trong môi trường khách sạn, nơi nhiều thú cưng ở cùng nhau, nguy cơ lây bệnh cao hơn bình thường. Cách tránh: kiểm tra sổ vaccine 1 tuần trước ngày gửi. Chụp ảnh sổ vaccine lưu trên điện thoại làm bản dự phòng.',
+          'Sai lầm 3: Không thông báo tình trạng sức khỏe đặc biệt\n\n"Boss nhà mình khỏe mạnh, không cần nói gì." Suy nghĩ này nguy hiểm. Hậu quả thực tế: boss bị dị ứng gà mà khách sạn cho ăn thức ăn có gà, kết quả nôn mửa và tiêu chảy. Boss đang uống thuốc tim mà không ai cho uống, bệnh tái phát. Boss sợ chó lớn mà bị xếp chung khu vực, stress nặng. Cách tránh: viết ra giấy tất cả thông tin sức khỏe. Gửi cho khách sạn trước ngày drop-off.',
+          'Sai lầm 4: Chia tay boss quá "kịch tính"\n\nSai lầm mà hầu hết sen đều mắc vì yêu boss quá nhiều. Bạn ôm boss, khóc, nói "mẹ xin lỗi con," rồi quay đi quay lại 5 lần trước khi rời đi. Một nghiên cứu năm 2021 trên tạp chí Nature Scientific Reports cho thấy chó đọc cảm xúc của chủ rất tốt. Khi bạn lo lắng và buồn, boss cảm nhận được và cũng trở nên lo lắng. Cách tránh: giữ bình tĩnh và tự tin khi drop-off. Nói lời tạm biệt ngắn gọn, vui vẻ. Không quay lại sau khi đã đi.',
+          'Sai lầm 5: Không hỏi về quy trình khẩn cấp\n\n"Nếu boss bị ốm lúc 2 giờ sáng, ai sẽ xử lý?" Nếu bạn không hỏi câu này trước khi gửi, bạn đang mạo hiểm. Bốn câu hỏi cần hỏi: "Có nhân viên trực ban đêm không?" "Nếu boss cần đi bác sĩ thú y khẩn cấp, quy trình như thế nào?" "Ai quyết định đưa boss đi bệnh viện?" "Chi phí thú y khẩn cấp ai chịu?" Hỏi trước khi đặt phòng, không phải lúc drop-off.',
+          'Tóm tắt: Chọn qua ảnh, không đến thăm → Đến tận nơi ít nhất 1 lần. Quên sổ vaccine → Kiểm tra 1 tuần trước, chụp ảnh dự phòng. Không báo sức khỏe đặc biệt → Viết ra giấy, gửi trước cho khách sạn. Chia tay quá kịch tính → Bình tĩnh, ngắn gọn, không quay lại. Không hỏi quy trình khẩn cấp → Hỏi trước khi đặt, không phải lúc drop-off.',
+          'PetZone giúp bạn tránh hầu hết các sai lầm này. Khách sạn đã được xác minh, thông tin sức khỏe gửi qua app, ảnh check-in có timestamp, chat trực tiếp với khách sạn bất cứ lúc nào.',
+        ],
+      },
     ],
   },
 }

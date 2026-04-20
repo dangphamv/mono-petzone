@@ -29,14 +29,37 @@ export interface Dictionary {
     teamTitle: string; teamText: string
     hotline: string
   }
-  contactPage: { metaTitle: string; metaDescription: string; title: string; subtitle: string }
+  contactPage: {
+    metaTitle: string; metaDescription: string; title: string; subtitle: string
+    channels: readonly { icon: string; label: string; value: string; link: string }[]
+    socialTitle: string
+    socials: readonly { platform: string; handle: string; url: string }[]
+    ownerTitle: string; ownerText: string
+    providerTitle: string; providerText: string
+    hoursTitle: string; hoursText: string
+    locationTitle: string; locationText: string
+  }
   forProvidersPage: {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
+    ctaText: string; ctaSubtext: string
     features: readonly { title: string; description: string }[]
+    howTitle: string
+    howSteps: readonly { title: string; description: string }[]
+    pricingTitle: string; pricingRate: string; pricingDesc: string
+    faqTitle: string
+    faqs: readonly { q: string; a: string }[]
   }
   pricingPage: {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
+    ownerTitle: string; ownerSubtitle: string; ownerFree: string
+    ownerFeatures: readonly string[]
+    providerTitle: string; providerSubtitle: string
     commission: string; commissionDesc: string
+    providerFeatures: readonly string[]
+    launchOffer: string; launchOfferDesc: string
+    comparisonTitle: string
+    comparisonHeaders: readonly string[]
+    comparisonRows: readonly { feature: string; traditional: string; petzone: string }[]
   }
   termsPage: { metaTitle: string; title: string; lastUpdated: string; sections: readonly { heading: string; content: string }[] }
   privacyPage: { metaTitle: string; title: string; lastUpdated: string; sections: readonly { heading: string; content: string }[] }
@@ -47,7 +70,7 @@ export interface Dictionary {
   }
   blogPage: {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
-    readMore: string; minRead: string; fullArticlePlaceholder: string
+    readMore: string; minRead: string; fullArticlePlaceholder: string; filterAll: string
     posts: readonly { slug: string; title: string; excerpt: string; date: string; readTime: string; category: string; body: readonly string[] }[]
   }
 }
@@ -156,29 +179,104 @@ const vi: Dictionary = {
     hotline: 'Hotline: 19900999',
   },
   contactPage: {
-    metaTitle: 'Liên hệ',
-    metaDescription: 'Liên hệ với đội ngũ PetZone',
-    title: 'Liên hệ',
-    subtitle: 'Có câu hỏi? Hãy liên hệ với chúng tôi.',
+    metaTitle: 'Liên Hệ PetZone',
+    metaDescription: 'Liên hệ đội ngũ PetZone qua email, hotline hoặc mạng xã hội. Hỗ trợ cho cả chủ nuôi và đối tác khách sạn.',
+    title: 'Liên hệ với chúng tôi',
+    subtitle: 'Có câu hỏi? Cần hỗ trợ? Muốn hợp tác? Chúng tôi phản hồi trong vòng 24 giờ.',
+    channels: [
+      { icon: 'mail', label: 'Email', value: 'hello@petzone.vn', link: 'mailto:hello@petzone.vn' },
+      { icon: 'phone', label: 'Hotline', value: '19900999', link: 'tel:19900999' },
+      { icon: 'message-circle', label: 'Zalo', value: 'PetZone Vietnam', link: 'https://zalo.me/petzone' },
+    ],
+    socialTitle: 'Theo dõi PetZone',
+    socials: [
+      { platform: 'Facebook', handle: '@petzone.vn', url: 'https://facebook.com/petzone.vn' },
+      { platform: 'TikTok', handle: '@petzone.vn', url: 'https://tiktok.com/@petzone.vn' },
+      { platform: 'Instagram', handle: '@petzone.vn', url: 'https://instagram.com/petzone.vn' },
+    ],
+    ownerTitle: 'Dành cho chủ nuôi',
+    ownerText: 'Cần hỗ trợ đặt phòng, hủy đơn, hoặc khiếu nại? Email support@petzone.vn hoặc chat trực tiếp trong app.',
+    providerTitle: 'Dành cho đối tác',
+    providerText: 'Muốn đăng ký làm đối tác hoặc cần hỗ trợ kỹ thuật? Email partners@petzone.vn hoặc gọi hotline.',
+    hoursTitle: 'Giờ hỗ trợ',
+    hoursText: 'Thứ 2 — Thứ 7, 8:00 — 20:00 (GMT+7)',
+    locationTitle: 'Địa chỉ',
+    locationText: 'TP. Hồ Chí Minh, Việt Nam',
   },
   forProvidersPage: {
-    metaTitle: 'Dành cho đối tác',
-    metaDescription: 'Trở thành đối tác PetZone và tiếp cận hàng nghìn khách hàng tiềm năng',
-    title: 'Dành cho đối tác',
-    subtitle: 'Tham gia PetZone để tiếp cận hàng nghìn chủ nuôi đang tìm kiếm dịch vụ lưu trú chất lượng cho thú cưng.',
+    metaTitle: 'Dành Cho Đối Tác — Nhận Đơn Đặt Phòng Ổn Định Với PetZone',
+    metaDescription: 'Tham gia PetZone để tiếp cận hàng nghìn chủ nuôi tại HCMC. Quản lý đơn hàng dễ dàng, thanh toán minh bạch. 0% phí 3 tháng đầu.',
+    title: 'Nhận đơn đặt phòng ổn định, không cần chạy quảng cáo',
+    subtitle: 'PetZone kết nối bạn với hàng nghìn sen đang tìm nơi gửi boss tại HCMC. Quản lý từ điện thoại, thanh toán đúng hạn.',
+    ctaText: 'Đăng ký làm đối tác — Miễn phí',
+    ctaSubtext: '0% hoa hồng trong 3 tháng đầu tiên',
     features: [
-      { title: 'Quản lý dễ dàng', description: 'Quản lý phòng, lịch, đơn hàng từ ứng dụng di động' },
-      { title: 'Thanh toán minh bạch', description: 'Theo dõi doanh thu và nhận thanh toán định kỳ' },
-      { title: 'Hỗ trợ 24/7', description: 'Đội ngũ hỗ trợ luôn sẵn sàng giúp đỡ bạn' },
+      { title: 'Khách hàng tìm đến bạn', description: 'Sen tìm kiếm khách sạn trên PetZone mỗi ngày. Bạn không cần chạy quảng cáo hay đăng bài. Đơn hàng đến tự động khi hồ sơ của bạn đầy đủ.' },
+      { title: 'Quản lý mọi thứ từ điện thoại', description: 'Nhận đơn, xác nhận, gửi báo cáo, chat với khách. Tất cả trong app PetZone. Không cần máy tính, không cần phần mềm phức tạp.' },
+      { title: 'Thanh toán minh bạch, đúng hạn', description: 'Theo dõi doanh thu real-time. Tiền chuyển vào tài khoản ngân hàng sau khi dịch vụ hoàn tất. Hoa hồng rõ ràng, không phí ẩn.' },
+      { title: 'Xây dựng uy tín online', description: 'Hồ sơ chuyên nghiệp, đánh giá từ khách hàng thật, ảnh cơ sở đẹp. Giúp bạn nổi bật và thu hút thêm khách.' },
+      { title: 'Hỗ trợ từ đội ngũ PetZone', description: 'Chúng tôi hỗ trợ bạn từ lúc đăng ký đến khi nhận đơn đầu tiên. Có vấn đề? Liên hệ ngay, chúng tôi giải quyết.' },
+    ],
+    howTitle: 'Bắt đầu trong 3 bước',
+    howSteps: [
+      { title: 'Đăng ký & xác minh', description: 'Tạo tài khoản, upload giấy phép kinh doanh và ảnh cơ sở (tối thiểu 5 ảnh). Đội ngũ PetZone xác minh trong 48 giờ.' },
+      { title: 'Thiết lập hồ sơ', description: 'Thêm dịch vụ, giá phòng, lịch trống. Hồ sơ càng đầy đủ, càng nhiều khách tìm đến.' },
+      { title: 'Nhận đơn & kiếm tiền', description: 'Sen tìm thấy bạn, đặt phòng, thanh toán. Bạn xác nhận, chăm sóc boss, nhận tiền.' },
+    ],
+    pricingTitle: 'Chi phí minh bạch',
+    pricingRate: '15%',
+    pricingDesc: 'hoa hồng trên mỗi đơn hoàn thành. Không phí đăng ký. Không phí duy trì hàng tháng.',
+    faqTitle: 'Câu hỏi thường gặp',
+    faqs: [
+      { q: 'Tôi cần gì để đăng ký?', a: 'Giấy phép kinh doanh, ảnh cơ sở (tối thiểu 5 ảnh), thông tin dịch vụ và giá phòng.' },
+      { q: 'Mất bao lâu để được duyệt?', a: 'Thường trong 48 giờ. Đội ngũ PetZone sẽ liên hệ nếu cần thêm thông tin.' },
+      { q: 'Tôi nhận thanh toán khi nào?', a: 'Sau khi dịch vụ hoàn tất và boss được trả về. Tiền chuyển vào tài khoản ngân hàng trong 3 ngày làm việc.' },
+      { q: 'Nếu khách hủy đơn thì sao?', a: 'Tùy chính sách hủy bạn chọn (linh hoạt, vừa phải, nghiêm ngặt). PetZone tự động tính phí hủy theo chính sách.' },
+      { q: 'Tôi có thể từ chối đơn không?', a: 'Có, nhưng cần nêu lý do. Tỷ lệ từ chối cao sẽ ảnh hưởng đến thứ hạng hiển thị.' },
     ],
   },
   pricingPage: {
-    metaTitle: 'Bảng giá',
-    metaDescription: 'Mô hình hoa hồng minh bạch của PetZone',
-    title: 'Bảng giá',
-    subtitle: 'PetZone hoạt động theo mô hình hoa hồng minh bạch. Không phí ẩn.',
-    commission: 'Hoa hồng 15%',
-    commissionDesc: 'Chỉ tính trên mỗi đơn hàng hoàn thành. Không phí đăng ký, không phí duy trì.',
+    metaTitle: 'Bảng Giá PetZone',
+    metaDescription: 'PetZone miễn phí cho chủ nuôi. Đối tác chỉ trả 15% hoa hồng trên đơn hoàn thành. Không phí ẩn.',
+    title: 'Bảng giá đơn giản, minh bạch',
+    subtitle: 'Không phí ẩn. Không phí đăng ký. Giá phòng do khách sạn quyết định.',
+    ownerTitle: 'Dành cho chủ nuôi',
+    ownerSubtitle: 'Sử dụng PetZone hoàn toàn miễn phí',
+    ownerFree: 'MIỄN PHÍ',
+    ownerFeatures: [
+      'Tìm kiếm và so sánh khách sạn',
+      'Đặt phòng và thanh toán an toàn',
+      'Ảnh check-in có timestamp',
+      'Báo cáo hàng ngày về boss',
+      'Chat trực tiếp với khách sạn',
+      'Đánh giá sau dịch vụ',
+      'Hỗ trợ giải quyết tranh chấp',
+    ],
+    providerTitle: 'Dành cho đối tác',
+    providerSubtitle: 'Chỉ trả khi có đơn hàng hoàn thành',
+    commission: '15%',
+    commissionDesc: 'hoa hồng trên mỗi đơn hoàn thành. Không phí đăng ký, không phí duy trì hàng tháng.',
+    providerFeatures: [
+      'Tạo hồ sơ và listing miễn phí',
+      'Hệ thống quản lý đơn hàng',
+      'Nhận thanh toán trong 3 ngày làm việc',
+      'Hồ sơ chuyên nghiệp + đánh giá thật',
+      'Hỗ trợ từ đội ngũ PetZone',
+    ],
+    launchOffer: '🎉 Ưu đãi ra mắt',
+    launchOfferDesc: '0% hoa hồng trong 3 tháng đầu tiên cho đối tác mới đăng ký!',
+    comparisonTitle: 'So sánh: Tự tìm vs PetZone',
+    comparisonHeaders: ['', 'Tự tìm trên Facebook/Google', 'Đặt qua PetZone'],
+    comparisonRows: [
+      { feature: 'Giá phòng', traditional: 'Tùy khách sạn', petzone: 'Tùy khách sạn (giá hiển thị rõ ràng)' },
+      { feature: 'Phí dịch vụ cho chủ nuôi', traditional: 'Không', petzone: 'Không (miễn phí)' },
+      { feature: 'Xác minh khách sạn', traditional: 'Tự kiểm tra', petzone: 'PetZone đã xác minh' },
+      { feature: 'Ảnh check-in', traditional: 'Không có', petzone: 'Có timestamp + vị trí' },
+      { feature: 'Báo cáo hàng ngày', traditional: 'Tùy khách sạn', petzone: 'Có (nếu yêu cầu)' },
+      { feature: 'Bảo vệ thanh toán', traditional: 'Chuyển khoản trực tiếp', petzone: 'Escrow (giữ tiền an toàn)' },
+      { feature: 'Hỗ trợ tranh chấp', traditional: 'Tự giải quyết', petzone: 'PetZone hỗ trợ' },
+      { feature: 'Chính sách hoàn tiền', traditional: 'Không rõ ràng', petzone: 'Rõ ràng trước khi đặt' },
+    ],
   },
   termsPage: {
     metaTitle: 'Điều Khoản Sử Dụng — PetZone',
@@ -254,6 +352,7 @@ const vi: Dictionary = {
     readMore: 'Đọc tiếp',
     minRead: 'phút đọc',
     fullArticlePlaceholder: '',
+    filterAll: 'Tất cả',
     posts: [
       {
         slug: 'cach-chon-khach-san-thu-cung-uy-tin',

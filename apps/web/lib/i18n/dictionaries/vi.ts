@@ -67,11 +67,25 @@ export interface Dictionary {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
     ownerLabel: string; providerLabel: string
     items: readonly { question: string; answer: string; category: 'owner' | 'provider' }[]
+    becomePartnerBtn: string; orContactUs: string
   }
   blogPage: {
     metaTitle: string; metaDescription: string; title: string; subtitle: string
     readMore: string; minRead: string; fullArticlePlaceholder: string; filterAll: string
     posts: readonly { slug: string; title: string; excerpt: string; date: string; readTime: string; category: string; body: readonly string[] }[]
+  }
+  partnerRegister: {
+    metaTitle: string; metaDescription: string; title: string; subtitle: string
+    nameLabel: string; namePlaceholder: string
+    phoneLabel: string; phonePlaceholder: string
+    emailLabel: string; emailPlaceholder: string
+    propertyNameLabel: string; propertyNamePlaceholder: string
+    addressLabel: string; addressPlaceholder: string
+    servicesLabel: string; servicesOptions: readonly string[]
+    roomsLabel: string; roomsPlaceholder: string
+    messageLabel: string; messagePlaceholder: string
+    submitBtn: string; orContactLabel: string; orContactText: string
+    successTitle: string; successText: string
   }
 }
 
@@ -339,10 +353,12 @@ const vi: Dictionary = {
       { question: 'Nếu boss bị ốm hoặc có vấn đề thì sao?', answer: 'Khách sạn sẽ liên hệ bạn ngay lập tức qua app. Trong trường hợp khẩn cấp, đội ngũ PetZone hỗ trợ điều phối. Tiền thanh toán được giữ trong escrow cho đến khi dịch vụ hoàn tất.', category: 'owner' },
       { question: 'PetZone có ở thành phố tôi không?', answer: 'Hiện tại PetZone hoạt động tại TP. Hồ Chí Minh. Chúng tôi đang mở rộng sang Hà Nội và Đà Nẵng trong thời gian tới.', category: 'owner' },
       { question: 'Làm sao để trở thành đối tác PetZone?', answer: 'Đăng ký trên app hoặc website → Upload giấy phép kinh doanh và ảnh cơ sở (tối thiểu 5 ảnh) → Đội ngũ PetZone xác minh trong 48 giờ → Thiết lập hồ sơ và bắt đầu nhận đơn.', category: 'provider' },
-      { question: 'Phí hoa hồng là bao nhiêu?', answer: '10~30% trên mỗi đơn hàng hoàn thành, tùy theo loại dịch vụ. Không phí đăng ký, không phí duy trì hàng tháng. Ưu đãi ra mắt: 0% hoa hồng trong 3 tháng đầu tiên cho đối tác mới.', category: 'provider' },
+      { question: 'Phí hoa hồng là bao nhiêu?', answer: '10~30% trên mỗi đơn hàng hoàn thành, tùy thuộc vào điều kiện hợp đồng. Không phí đăng ký, không phí duy trì hàng tháng. Ưu đãi ra mắt: 0% hoa hồng trong 3 tháng đầu tiên cho đối tác mới.', category: 'provider' },
       { question: 'Tôi nhận thanh toán khi nào?', answer: 'Sau khi dịch vụ hoàn tất và boss được trả về cho chủ nuôi. Tiền được chuyển vào tài khoản ngân hàng của bạn sau khi trừ hoa hồng.', category: 'provider' },
       { question: 'Tôi có thể từ chối đơn đặt phòng không?', answer: 'Có, nhưng cần nêu lý do rõ ràng. Nếu không phản hồi trong 4 giờ, đơn tự động hủy. Tỷ lệ từ chối cao sẽ ảnh hưởng đến thứ hạng hiển thị của bạn trên PetZone.', category: 'provider' },
     ],
+    becomePartnerBtn: 'Trở thành đối tác',
+    orContactUs: 'Hoặc liên hệ PetZone để được hỗ trợ trực tiếp',
   },
   blogPage: {
     metaTitle: 'Blog — PetZone',
@@ -411,6 +427,33 @@ const vi: Dictionary = {
         ],
       },
     ],
+  },
+  partnerRegister: {
+    metaTitle: 'Đăng Ký Đối Tác — PetZone',
+    metaDescription: 'Đăng ký trở thành đối tác PetZone. Điền thông tin cơ sở của bạn để bắt đầu nhận đơn đặt phòng.',
+    title: 'Đăng ký trở thành đối tác',
+    subtitle: 'Điền thông tin bên dưới, đội ngũ PetZone sẽ liên hệ xác minh trong 48 giờ.',
+    nameLabel: 'Họ và tên',
+    namePlaceholder: 'Nguyễn Văn A',
+    phoneLabel: 'Số điện thoại',
+    phonePlaceholder: '0901 234 567',
+    emailLabel: 'Email',
+    emailPlaceholder: 'email@example.com',
+    propertyNameLabel: 'Tên cơ sở',
+    propertyNamePlaceholder: 'Khách sạn thú cưng ABC',
+    addressLabel: 'Địa chỉ cơ sở',
+    addressPlaceholder: '123 Nguyễn Huệ, Quận 1, TP.HCM',
+    servicesLabel: 'Dịch vụ cung cấp',
+    servicesOptions: ['Lưu trú (boarding)', 'Tắm & grooming', 'Spa & chăm sóc', 'Đón/trả tận nơi', 'Khác'],
+    roomsLabel: 'Số phòng/chỗ',
+    roomsPlaceholder: 'VD: 10 phòng',
+    messageLabel: 'Ghi chú thêm (tùy chọn)',
+    messagePlaceholder: 'Thông tin thêm về cơ sở của bạn...',
+    submitBtn: 'Gửi đăng ký',
+    orContactLabel: 'Cần hỗ trợ trực tiếp?',
+    orContactText: 'Liên hệ đội ngũ PetZone qua hotline 19900999 hoặc email partners@petzone.vn để được tư vấn.',
+    successTitle: 'Đăng ký thành công!',
+    successText: 'Cảm ơn bạn đã đăng ký. Đội ngũ PetZone sẽ liên hệ trong vòng 48 giờ để xác minh thông tin.',
   },
 }
 

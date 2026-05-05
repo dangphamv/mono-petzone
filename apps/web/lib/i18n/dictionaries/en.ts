@@ -131,12 +131,12 @@ const en: Dictionary = {
   forProvidersPage: {
     metaTitle: 'For Partners — Get Steady Bookings with PetZone',
     metaDescription: 'Join PetZone to reach thousands of pet owners in HCMC. Easy booking management, transparent payments. 0% commission for the first 3 months.',
-    title: 'Get steady bookings, no ads needed',
+    title: 'Get steady bookings, minimize your ad spend',
     subtitle: 'PetZone connects you with thousands of pet owners looking for boarding in HCMC. Manage from your phone, get paid on time.',
     ctaText: 'Sign Up as a Partner — Free',
     ctaSubtext: '0% commission for the first 3 months',
     features: [
-      { title: 'Customers come to you', description: 'Pet owners search PetZone every day. No ads to run, no posts to write. Bookings come automatically when your profile is complete.' },
+      { title: 'Customers come to you', description: 'Pet owners search PetZone every day. Minimize your ad spend, no posts to write. Bookings come automatically when your profile is complete.' },
       { title: 'Manage everything from your phone', description: 'Accept bookings, confirm stays, send reports, chat with guests. All in the PetZone app. No computer needed.' },
       { title: 'Transparent, on-time payments', description: 'Track revenue in real-time. Funds transfer to your bank after service is complete. Clear commission, no hidden fees.' },
       { title: 'Build your online reputation', description: 'Professional profile, real guest reviews, beautiful facility photos. Stand out and attract more clients.' },
@@ -156,7 +156,7 @@ const en: Dictionary = {
       { q: 'What do I need to sign up?', a: 'Business license, facility photos (minimum 5), service information and room prices.' },
       { q: 'How long does verification take?', a: 'Usually within 48 hours. The PetZone team will contact you if more information is needed.' },
       { q: 'When do I get paid?', a: 'After the service is complete and the pet is returned. Funds transfer to your bank within 3 business days.' },
-      { q: 'What if a customer cancels?', a: 'Depends on the cancellation policy you choose (flexible, moderate, strict). PetZone automatically calculates the cancellation fee.' },
+      { q: 'What if a customer cancels?', a: 'Depends on the cancellation policy of your property (flexible, moderate, strict). PetZone automatically calculates the cancellation fee.' },
       { q: 'Can I decline a booking?', a: 'Yes, but you need to provide a reason. A high decline rate will affect your search ranking.' },
     ],
   },

@@ -206,12 +206,12 @@ const vi: Dictionary = {
   forProvidersPage: {
     metaTitle: 'Dành Cho Đối Tác — Nhận Đơn Đặt Phòng Ổn Định Với PetZone',
     metaDescription: 'Tham gia PetZone để tiếp cận hàng nghìn chủ nuôi tại HCMC. Quản lý đơn hàng dễ dàng, thanh toán minh bạch. 0% phí 3 tháng đầu.',
-    title: 'Nhận đơn đặt phòng ổn định, không cần chạy quảng cáo',
+    title: 'Nhận đơn đặt phòng ổn định, giảm thiểu chi phí quảng cáo',
     subtitle: 'PetZone kết nối bạn với hàng nghìn sen đang tìm nơi gửi boss tại HCMC. Quản lý từ điện thoại, thanh toán đúng hạn.',
     ctaText: 'Đăng ký làm đối tác — Miễn phí',
     ctaSubtext: '0% hoa hồng trong 3 tháng đầu tiên',
     features: [
-      { title: 'Khách hàng tìm đến bạn', description: 'Sen tìm kiếm khách sạn trên PetZone mỗi ngày. Bạn không cần chạy quảng cáo hay đăng bài. Đơn hàng đến tự động khi hồ sơ của bạn đầy đủ.' },
+      { title: 'Khách hàng tìm đến bạn', description: 'Sen tìm kiếm khách sạn trên PetZone mỗi ngày. Giảm thiểu chi phí quảng cáo, không cần đăng bài. Đơn hàng đến tự động khi hồ sơ của bạn đầy đủ.' },
       { title: 'Quản lý mọi thứ từ điện thoại', description: 'Nhận đơn, xác nhận, gửi báo cáo, chat với khách. Tất cả trong app PetZone. Không cần máy tính, không cần phần mềm phức tạp.' },
       { title: 'Thanh toán minh bạch, đúng hạn', description: 'Theo dõi doanh thu real-time. Tiền chuyển vào tài khoản ngân hàng sau khi dịch vụ hoàn tất. Hoa hồng rõ ràng, không phí ẩn.' },
       { title: 'Xây dựng uy tín online', description: 'Hồ sơ chuyên nghiệp, đánh giá từ khách hàng thật, ảnh cơ sở đẹp. Giúp bạn nổi bật và thu hút thêm khách.' },
@@ -231,7 +231,7 @@ const vi: Dictionary = {
       { q: 'Tôi cần gì để đăng ký?', a: 'Giấy phép kinh doanh, ảnh cơ sở (tối thiểu 5 ảnh), thông tin dịch vụ và giá phòng.' },
       { q: 'Mất bao lâu để được duyệt?', a: 'Thường trong 48 giờ. Đội ngũ PetZone sẽ liên hệ nếu cần thêm thông tin.' },
       { q: 'Tôi nhận thanh toán khi nào?', a: 'Sau khi dịch vụ hoàn tất và boss được trả về. Tiền chuyển vào tài khoản ngân hàng trong 3 ngày làm việc.' },
-      { q: 'Nếu khách hủy đơn thì sao?', a: 'Tùy chính sách hủy bạn chọn (linh hoạt, vừa phải, nghiêm ngặt). PetZone tự động tính phí hủy theo chính sách.' },
+      { q: 'Nếu khách hủy đơn thì sao?', a: 'Tùy chính sách hủy của cơ sở bạn (linh hoạt, vừa phải, nghiêm ngặt). PetZone tự động tính phí hủy theo chính sách.' },
       { q: 'Tôi có thể từ chối đơn không?', a: 'Có, nhưng cần nêu lý do. Tỷ lệ từ chối cao sẽ ảnh hưởng đến thứ hạng hiển thị.' },
     ],
   },

@@ -1,12 +1,18 @@
 import type { Metadata } from 'next'
 import { getDictionary } from '@/lib/i18n/get-dictionary'
 import { defaultLocale, type Locale } from '@/lib/i18n/config'
-import { Mail, Phone, MessageCircle, MapPin, Clock, ExternalLink } from 'lucide-react'
+import { Mail, Phone, MessageCircle, MapPin, Clock, Facebook, Instagram } from 'lucide-react'
 
 const iconMap = {
   mail: Mail,
   phone: Phone,
   'message-circle': MessageCircle,
+}
+
+const socialIconMap = {
+  Facebook: Facebook,
+  Instagram: Instagram,
+  TikTok: null, // custom SVG used inline
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -63,20 +69,26 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
         {/* Social Links */}
         <div className="mt-12">
           <h2 className="text-center font-heading text-2xl font-bold text-text">{dict.contactPage.socialTitle}</h2>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            {dict.contactPage.socials.map((social) => (
-              <a
-                key={social.platform}
-                href={social.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-text-secondary transition-all duration-200 hover:border-primary/30 hover:text-primary"
-              >
-                {social.platform}
-                <span className="text-primary">{social.handle}</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            ))}
+          <div className="mt-6 flex items-center justify-center gap-4">
+            {dict.contactPage.socials.map((social) => {
+              const SocialIcon = socialIconMap[social.platform as keyof typeof socialIconMap]
+              return (
+                <a
+                  key={social.platform}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.platform}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 text-text-secondary transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  {SocialIcon ? <SocialIcon className="h-5 w-5" /> : (
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.88 2.89 2.89 0 0 1-2.88-2.88 2.89 2.89 0 0 1 2.88-2.88c.28 0 .56.04.82.1v-3.5a6.37 6.37 0 0 0-.82-.05A6.34 6.34 0 0 0 3.15 15.65 6.34 6.34 0 0 0 9.49 22a6.34 6.34 0 0 0 6.34-6.34V9.05a8.16 8.16 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.48z"/>
+                    </svg>
+                  )}
+                </a>
+              )
+            })}
           </div>
         </div>
 

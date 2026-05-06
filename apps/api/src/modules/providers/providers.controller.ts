@@ -22,6 +22,7 @@ import {
   RegisterProviderDto, UpdateListingDto, UploadDocumentsDto,
   CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto,
   UpdateAvailabilityDto, BulkUpdateAvailabilityDto,
+  VerificationStatusResponseDto,
 } from './dto';
 import {
   ok,
@@ -105,7 +106,12 @@ export class ProvidersController {
   @Get('me/verification-status')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Check provider verification status' })
-  @ApiResponse({ status: 200, description: 'Verification status returned. Returns { verification_status: "not_approved" } if not yet approved.', schema: { example: ok(EXAMPLE_VERIFICATION_STATUS) } })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification status returned. One of: pending, approved, rejected, suspended.',
+    type: VerificationStatusResponseDto,
+    schema: { example: ok(EXAMPLE_VERIFICATION_STATUS) },
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   getVerificationStatus(@CurrentUser() user: AuthUser) {
     return this.providersService.getVerificationStatus(user.id);

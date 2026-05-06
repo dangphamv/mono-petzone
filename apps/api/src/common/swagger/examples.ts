@@ -263,9 +263,7 @@ export const EXAMPLE_PROVIDER_LIST_ITEM = {
 
 export const EXAMPLE_VERIFICATION_STATUS = {
   verification_status: 'approved',
-  submitted_at: '2026-01-12T10:00:00.000Z',
-  reviewed_at: '2026-01-13T15:30:00.000Z',
-  rejection_reason: null,
+  verified_at: '2026-01-13T15:30:00.000Z',
 };
 
 export const EXAMPLE_ROOM = {

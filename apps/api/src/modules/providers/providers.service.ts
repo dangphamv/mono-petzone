@@ -204,8 +204,8 @@ export class ProvidersService {
       .select('verification_status, verified_at')
       .eq('user_id', userId)
       .maybeSingle();
-    if (!data || data.verification_status !== 'approved') {
-      return { verification_status: 'not_approved' };
+    if (!data) {
+      return { verification_status: 'pending' as const, verified_at: null };
     }
     return data;
   }

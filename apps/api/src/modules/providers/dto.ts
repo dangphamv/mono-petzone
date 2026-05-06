@@ -180,6 +180,18 @@ export class UpdateAvailabilityDto {
   dates: AvailabilityDateDto[];
 }
 
+export class VerificationStatusResponseDto {
+  @ApiProperty({
+    example: 'pending',
+    description: 'Provider verification status',
+    enum: ['pending', 'approved', 'rejected', 'suspended'],
+  })
+  verification_status: 'pending' | 'approved' | 'rejected' | 'suspended';
+
+  @ApiPropertyOptional({ example: '2026-01-13T15:30:00.000Z', description: 'Approval timestamp (only when approved)', nullable: true })
+  verified_at?: string | null;
+}
+
 export class BulkUpdateAvailabilityDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Room type UUID' })
   room_type_id: string;

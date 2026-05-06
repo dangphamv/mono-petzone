@@ -199,12 +199,14 @@ export class ProvidersService {
   }
 
   async getVerificationStatus(userId: string) {
-    const { data, error } = await this.supabase.client
+    const { data } = await this.supabase.client
       .from('providers')
       .select('verification_status, verified_at')
       .eq('user_id', userId)
-      .single();
-    if (error || !data) throw new ForbiddenException('Not registered as a provider');
+      .maybeSingle();
+    if (!data || data.verification_status !== 'approved') {
+      return { verification_status: 'not_approved' };
+    }
     return data;
   }
 

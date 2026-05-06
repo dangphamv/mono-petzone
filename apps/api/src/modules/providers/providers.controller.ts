@@ -105,9 +105,8 @@ export class ProvidersController {
   @Get('me/verification-status')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Check provider verification status' })
-  @ApiResponse({ status: 200, description: 'Verification status returned', schema: { example: ok(EXAMPLE_VERIFICATION_STATUS) } })
+  @ApiResponse({ status: 200, description: 'Verification status returned. Returns { verification_status: "not_approved" } if not yet approved.', schema: { example: ok(EXAMPLE_VERIFICATION_STATUS) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
-  @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   getVerificationStatus(@CurrentUser() user: AuthUser) {
     return this.providersService.getVerificationStatus(user.id);
   }

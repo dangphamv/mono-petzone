@@ -111,7 +111,7 @@ export default function UsersPage() {
             size="sm"
             variant="outline"
             className="text-destructive hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); setSelected(row.original) }}
+            onClick={() => setSelected(row.original)}
           >
             {t('users.suspend')}
           </Button>

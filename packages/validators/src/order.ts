@@ -19,6 +19,21 @@ export const createOrderSchema = z.object({
   { message: 'Check-out date must be after check-in date', path: ['check_out_date'] },
 )
 
+export const adminCreateOrderSchema = z.object({
+  owner_id: z.string().uuid(),
+  provider_id: z.string().uuid(),
+  room_type_id: z.string().uuid(),
+  pet_ids: z.array(z.string().uuid()).min(1).max(10),
+  check_in_date: dateString,
+  check_out_date: dateString,
+  add_on_ids: z.array(z.string().uuid()).max(20).default([]),
+  special_notes: z.string().max(1000).optional(),
+  daily_status_report: z.boolean().default(true),
+}).refine(
+  (d) => new Date(d.check_out_date) > new Date(d.check_in_date),
+  { message: 'Check-out date must be after check-in date', path: ['check_out_date'] },
+)
+
 export const calculatePriceSchema = z.object({
   provider_id: z.string().uuid(),
   room_type_id: z.string().uuid(),
@@ -50,6 +65,7 @@ export const updateOrderStatusSchema = z.object({
 })
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>
+export type AdminCreateOrderInput = z.infer<typeof adminCreateOrderSchema>
 export type CalculatePriceInput = z.infer<typeof calculatePriceSchema>
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>
 export type DeclineOrderInput = z.infer<typeof declineOrderSchema>

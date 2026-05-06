@@ -14,15 +14,18 @@ import type {
   ModerateReviewInput,
   UpdateConfigInput,
   AdminMessageInput,
+  AdminCreateOrderInput,
 } from '@petzone/validators';
 import { SupabaseService } from '../supabase/supabase.service';
-import { PROVIDER_COLUMNS, ORDER_LIST_COLUMNS, DISPUTE_COLUMNS, USER_COLUMNS, REVIEW_COLUMNS } from '../../common/constants/columns';
+import { OrdersService } from '../orders/orders.service';
+import { PROVIDER_COLUMNS, ORDER_LIST_COLUMNS, DISPUTE_COLUMNS, USER_COLUMNS, REVIEW_COLUMNS, PET_COLUMNS, ROOM_COLUMNS, ADDON_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly supabase: SupabaseService,
+    private readonly ordersService: OrdersService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
@@ -51,8 +54,8 @@ export class AdminService {
     return result;
   }
 
-  async getProviders(params: PaginationParams & { status?: string }) {
-    const { page = 1, limit = 20, status } = params;
+  async getProviders(params: PaginationParams & { status?: string; search?: string }) {
+    const { page = 1, limit = 20, status, search } = params;
     const from = (page - 1) * limit;
 
     let query = this.supabase.client
@@ -61,11 +64,85 @@ export class AdminService {
       .order('created_at', { ascending: true });
 
     if (status) query = query.eq('verification_status', status);
+    if (search) query = query.ilike('business_name', `%${search}%`);
 
     const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
     return paginate(data ?? [], count ?? 0, { page, limit });
+  }
+
+  async getProviderRooms(providerId: string) {
+    const { data, error } = await this.supabase.client
+      .from('room_types')
+      .select(ROOM_COLUMNS)
+      .eq('provider_id', providerId)
+      .eq('is_active', true)
+      .order('price_per_night', { ascending: true });
+    if (error) throw new BadRequestException(error.message);
+    return data ?? [];
+  }
+
+  async getProviderAddOns(providerId: string) {
+    const { data, error } = await this.supabase.client
+      .from('add_on_services')
+      .select(ADDON_COLUMNS)
+      .eq('provider_id', providerId)
+      .eq('is_active', true)
+      .order('price', { ascending: true });
+    if (error) throw new BadRequestException(error.message);
+    return data ?? [];
+  }
+
+  async createOrder(adminId: string, body: AdminCreateOrderInput) {
+    const { owner_id, ...orderBody } = body;
+    const order = await this.ordersService.create(owner_id, orderBody);
+    await this.logAction(adminId, 'create_order', 'order', order.id, {
+      owner_id,
+      provider_id: body.provider_id,
+      total_price: order.total_price,
+    });
+    return order;
+  }
+
+  private readonly CANCELLABLE_STATUSES = ['pending_payment', 'pending', 'confirmed'];
+
+  async cancelOrder(adminId: string, id: string, reason: string) {
+    const { data: order, error } = await this.supabase.client
+      .from('orders')
+      .select('id, status, total_price')
+      .eq('id', id)
+      .single();
+    if (error || !order) throw new NotFoundException('Order not found');
+    if (!this.CANCELLABLE_STATUSES.includes(order.status as string))
+      throw new BadRequestException(`Cannot cancel order in status '${order.status}'`);
+
+    const { data: updated, error: updateErr } = await this.supabase.client
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: 'admin',
+        cancellation_reason: reason,
+        refund_amount: Number(order.total_price) || 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select(ORDER_LIST_COLUMNS)
+      .single();
+    if (updateErr) throw new BadRequestException(updateErr.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id,
+      status: 'cancelled',
+      actor_id: adminId,
+      actor_type: 'admin',
+      note: reason,
+    });
+
+    await this.logAction(adminId, 'cancel_order', 'order', id, { reason });
+
+    return updated;
   }
 
   async getProviderDetail(id: string) {
@@ -198,15 +275,19 @@ export class AdminService {
     return dispute;
   }
 
-  async getUsers(params: PaginationParams) {
-    const { page = 1, limit = 20 } = params;
+  async getUsers(params: PaginationParams & { role?: string; search?: string }) {
+    const { page = 1, limit = 20, role, search } = params;
     const from = (page - 1) * limit;
 
-    const { data, error, count } = await this.supabase.client
+    let query = this.supabase.client
       .from('users')
       .select(USER_COLUMNS, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, from + limit - 1);
+      .order('created_at', { ascending: false });
+
+    if (role) query = query.eq('role', role);
+    if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+
+    const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
     return paginate(data ?? [], count ?? 0, { page, limit });
@@ -229,6 +310,39 @@ export class AdminService {
       status,
     });
 
+    return data;
+  }
+
+  async getPets(params: PaginationParams & { species?: string; search?: string; ownerId?: string }) {
+    const { page = 1, limit = 20, species, search, ownerId } = params;
+    const from = (page - 1) * limit;
+
+    let query = this.supabase.client
+      .from('pets')
+      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, email, full_name, avatar_url)`, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (ownerId) query = query.eq('owner_id', ownerId);
+    if (species) {
+      const list = species.split(',').map((s) => s.trim()).filter(Boolean);
+      if (list.length === 1) query = query.eq('species', list[0]);
+      else if (list.length > 1) query = query.in('species', list);
+    }
+    if (search) query = query.ilike('name', `%${search}%`);
+
+    const { data, error, count } = await query.range(from, from + limit - 1);
+    if (error) throw new BadRequestException(error.message);
+
+    return paginate(data ?? [], count ?? 0, { page, limit });
+  }
+
+  async getPetDetail(id: string) {
+    const { data, error } = await this.supabase.client
+      .from('pets')
+      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, email, full_name, avatar_url, phone)`)
+      .eq('id', id)
+      .single();
+    if (error || !data) throw new NotFoundException('Pet not found');
     return data;
   }
 

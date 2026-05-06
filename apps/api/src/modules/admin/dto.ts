@@ -52,3 +52,32 @@ export class AdminMessageDto {
   @ApiProperty({ example: 'Please resolve this issue between yourselves or contact support.', description: 'Mediation message (1-2000 chars)' })
   message: string;
 }
+
+export class AdminCreateOrderDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Owner user ID' })
+  owner_id: string;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001', description: 'Provider ID' })
+  provider_id: string;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440002', description: 'Room type ID' })
+  room_type_id: string;
+
+  @ApiProperty({ type: [String], example: ['550e8400-e29b-41d4-a716-446655440003'], description: 'Pet IDs (1-10)' })
+  pet_ids: string[];
+
+  @ApiProperty({ example: '2026-06-01', description: 'Check-in date (YYYY-MM-DD)' })
+  check_in_date: string;
+
+  @ApiProperty({ example: '2026-06-05', description: 'Check-out date (YYYY-MM-DD)' })
+  check_out_date: string;
+
+  @ApiProperty({ type: [String], example: [], description: 'Add-on service IDs (max 20)' })
+  add_on_ids: string[];
+
+  @ApiPropertyOptional({ example: 'Pet has special diet requirements', description: 'Special notes (max 1000 chars)' })
+  special_notes?: string;
+
+  @ApiProperty({ example: true, description: 'Whether to receive daily status reports', default: true })
+  daily_status_report: boolean;
+}

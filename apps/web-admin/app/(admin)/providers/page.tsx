@@ -107,10 +107,15 @@ export default function ProvidersPage() {
         if (status !== 'pending') return null
         return (
           <div className="flex gap-1.5">
-            <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row.original); setAction('approved') }}>
+            <Button size="sm" onClick={() => { setSelected(row.original); setAction('approved') }}>
               {t('providers.approve')}
             </Button>
-            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setSelected(row.original); setAction('rejected') }}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => { setSelected(row.original); setAction('rejected') }}
+            >
               {t('providers.reject')}
             </Button>
           </div>

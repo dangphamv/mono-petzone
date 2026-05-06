@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn, Avatar, AvatarFallback } from '@petzone/ui'
 import {
   LayoutDashboard, Building2, ClipboardList, AlertTriangle,
-  Users, Star, BarChart3, Settings, LogOut, Globe,
+  Users, Star, BarChart3, Settings, LogOut, Globe, PawPrint,
 } from 'lucide-react'
 import { useLogout } from '@/lib/hooks/use-auth'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
@@ -18,6 +18,7 @@ const navItems: { href: string; labelKey: TranslationKey; icon: typeof LayoutDas
   { href: '/orders', labelKey: 'nav.orders', icon: ClipboardList },
   { href: '/disputes', labelKey: 'nav.disputes', icon: AlertTriangle },
   { href: '/users', labelKey: 'nav.users', icon: Users },
+  { href: '/pets', labelKey: 'nav.pets', icon: PawPrint },
   { href: '/reviews', labelKey: 'nav.reviews', icon: Star },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/config', labelKey: 'nav.config', icon: Settings },
@@ -82,9 +83,9 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        <NavSection items={navItems.slice(0, 5)} label={t('nav.menu')} />
+        <NavSection items={navItems.slice(0, 6)} label={t('nav.menu')} />
         <div className="pb-1 pt-4" />
-        <NavSection items={navItems.slice(5)} label={t('nav.system')} />
+        <NavSection items={navItems.slice(6)} label={t('nav.system')} />
       </nav>
 
       <div className="mx-4 h-px bg-sidebar-border" />

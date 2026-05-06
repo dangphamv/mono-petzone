@@ -157,15 +157,20 @@ export function DataTable<TData, TValue>({
                   className={[
                     'border-b border-border/40',
                     idx % 2 === 1 ? 'bg-muted/30' : '',
-                    onRowClick ? 'cursor-pointer' : '',
                   ].join(' ')}
-                  onClick={() => onRowClick?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-5 py-4">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isActions = cell.column.id === 'actions'
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={['px-5 py-4', !isActions && onRowClick ? 'cursor-pointer' : ''].join(' ')}
+                        onClick={!isActions && onRowClick ? () => onRowClick(row.original) : undefined}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             )}

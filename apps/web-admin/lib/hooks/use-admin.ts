@@ -82,6 +82,65 @@ export function useOrders(params: TableQueryParams = {}) {
   })
 }
 
+export interface CreateOrderBody {
+  owner_id: string
+  provider_id: string
+  room_type_id: string
+  pet_ids: string[]
+  check_in_date: string
+  check_out_date: string
+  add_on_ids: string[]
+  special_notes?: string
+  daily_status_report: boolean
+}
+
+export function useCreateOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateOrderBody) =>
+      api<{ data: Record<string, unknown> }>('/admin/orders', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+    },
+  })
+}
+
+export function useCancelOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api(`/admin/orders/${id}/cancel`, { method: 'PATCH', body: JSON.stringify({ reason }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+    },
+  })
+}
+
+export function useSendOrderMessage() {
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message: string }) =>
+      api(`/admin/orders/${id}/message`, { method: 'POST', body: JSON.stringify({ message }) }),
+  })
+}
+
+export function useProviderRooms(providerId: string | undefined) {
+  return useQuery<Record<string, unknown>[]>({
+    queryKey: ['admin', 'provider-rooms', providerId],
+    queryFn: async () => (await api<{ data: Record<string, unknown>[] }>(`/admin/providers/${providerId}/rooms`)).data,
+    enabled: !!providerId,
+  })
+}
+
+export function useProviderAddOns(providerId: string | undefined) {
+  return useQuery<Record<string, unknown>[]>({
+    queryKey: ['admin', 'provider-addons', providerId],
+    queryFn: async () => (await api<{ data: Record<string, unknown>[] }>(`/admin/providers/${providerId}/addons`)).data,
+    enabled: !!providerId,
+  })
+}
+
 export function useDisputes(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
     queryKey: ['admin', 'disputes', params],
@@ -114,6 +173,29 @@ export function useSuspendUser() {
     mutationFn: ({ id, ...body }: { id: string; reason: string; is_permanent: boolean }) =>
       api(`/admin/users/${id}/suspend`, { method: 'PATCH', body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  })
+}
+
+export function usePets(params: TableQueryParams = {}) {
+  return useQuery<PaginatedResponse<Record<string, unknown>>>({
+    queryKey: ['admin', 'pets', params],
+    queryFn: () => api(buildQuery('/admin/pets', params)),
+  })
+}
+
+export function usePetDetail(id: string) {
+  return useQuery<Record<string, unknown>>({
+    queryKey: ['admin', 'pet', id],
+    queryFn: async () => (await api<{ data: Record<string, unknown> }>(`/admin/pets/${id}`)).data,
+    enabled: !!id,
+  })
+}
+
+export function useOwnerPets(ownerId: string | undefined) {
+  return useQuery<PaginatedResponse<Record<string, unknown>>>({
+    queryKey: ['admin', 'pets', 'by-owner', ownerId],
+    queryFn: () => api(`/admin/pets?owner_id=${ownerId}&page=1&limit=100`),
+    enabled: !!ownerId,
   })
 }
 

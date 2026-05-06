@@ -1,16 +1,24 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList } from 'lucide-react'
+import Link from 'next/link'
+import { ClipboardList, Plus, MoreHorizontal, Eye, MessageSquare, Ban } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@petzone/ui'
+import {
+  Badge, Button,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Textarea, Label,
+} from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
-import { useOrders } from '@/lib/hooks/use-admin'
+import { useOrders, useCancelOrder, useSendOrderMessage } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
 type Order = Record<string, unknown>
+
+const CANCELLABLE_STATUSES = new Set(['pending_payment', 'pending', 'confirmed'])
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '-'
@@ -31,6 +39,14 @@ export default function OrdersPage() {
     filters: table.filters,
   })
 
+  const cancelOrder = useCancelOrder()
+  const sendMessage = useSendOrderMessage()
+
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [messageTarget, setMessageTarget] = useState<Order | null>(null)
+  const [messageText, setMessageText] = useState('')
+
   const STATUS_MAP: Record<string, { variant: 'default' | 'warning' | 'info' | 'success' | 'destructive'; key: string }> = {
     pending: { variant: 'warning', key: 'status.pending' },
     confirmed: { variant: 'default', key: 'status.confirmed' },
@@ -41,6 +57,35 @@ export default function OrdersPage() {
     cancelled: { variant: 'destructive', key: 'status.cancelled' },
     disputed: { variant: 'destructive', key: 'status.disputed' },
   }
+
+  const handleCancel = () => {
+    if (!cancelTarget || !cancelReason.trim()) return
+    cancelOrder.mutate(
+      { id: cancelTarget.id as string, reason: cancelReason.trim() },
+      {
+        onSuccess: () => {
+          setCancelTarget(null)
+          setCancelReason('')
+        },
+      },
+    )
+  }
+
+  const handleSendMessage = () => {
+    if (!messageTarget || !messageText.trim()) return
+    sendMessage.mutate(
+      { id: messageTarget.id as string, message: messageText.trim() },
+      {
+        onSuccess: () => {
+          setMessageTarget(null)
+          setMessageText('')
+        },
+      },
+    )
+  }
+
+  const closeCancel = () => { setCancelTarget(null); setCancelReason('') }
+  const closeMessage = () => { setMessageTarget(null); setMessageText('') }
 
   const columns = useMemo<ColumnDef<Order, unknown>[]>(() => [
     {
@@ -97,7 +142,50 @@ export default function OrdersPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('common.created_at')} />,
       cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.original.created_at as string)}</span>,
     },
-  ], [t])
+    {
+      id: 'actions',
+      size: 60,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const status = row.original.status as string
+        const canCancel = CANCELLABLE_STATUSES.has(status)
+        return (
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t('orders.actions')}>
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onSelect={() => router.push(`/orders/${row.original.id}`)}>
+                  <Eye size={14} className="mr-2" />
+                  {t('orders.view_detail')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setMessageTarget(row.original)}>
+                  <MessageSquare size={14} className="mr-2" />
+                  {t('orders.send_message')}
+                </DropdownMenuItem>
+                {canCancel && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => setCancelTarget(row.original)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Ban size={14} className="mr-2" />
+                      {t('orders.cancel_order')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )
+      },
+    },
+  ], [t, router])
 
   const statusOptions = useMemo(() => [
     { label: t('status.pending'), value: 'pending' },
@@ -111,14 +199,22 @@ export default function OrdersPage() {
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="stat-icon bg-violet-50 text-violet-600">
-          <ClipboardList size={20} />
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="stat-icon bg-violet-50 text-violet-600">
+            <ClipboardList size={20} />
+          </div>
+          <div>
+            <h1 className="page-header">{t('orders.title')}</h1>
+            <p className="page-description">{t('orders.subtitle')}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="page-header">{t('orders.title')}</h1>
-          <p className="page-description">{t('orders.subtitle')}</p>
-        </div>
+        <Button asChild>
+          <Link href="/orders/new">
+            <Plus size={16} />
+            {t('orders.create')}
+          </Link>
+        </Button>
       </div>
 
       <DataTable
@@ -146,6 +242,68 @@ export default function OrdersPage() {
           />
         }
       />
+
+      {/* Cancel dialog */}
+      <Dialog open={cancelTarget !== null} onOpenChange={(open) => { if (!open) closeCancel() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('orders.cancel_title')}</DialogTitle>
+            <DialogDescription>
+              {t('orders.cancel_desc')} <strong>{cancelTarget?.order_number as string}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t('common.reason')} *</Label>
+            <Textarea
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder={t('orders.cancel_reason')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCancel}>{t('common.cancel')}</Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelOrder.isPending || !cancelReason.trim()}
+            >
+              {cancelOrder.isPending ? t('common.processing') : t('orders.cancel_confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send message dialog */}
+      <Dialog open={messageTarget !== null} onOpenChange={(open) => { if (!open) closeMessage() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('orders.send_message_title')}</DialogTitle>
+            <DialogDescription>
+              {t('orders.send_message_desc')}{' '}
+              <strong>{messageTarget?.order_number as string}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t('common.note')} *</Label>
+            <Textarea
+              rows={4}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder={t('orders.send_message_placeholder')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeMessage}>{t('common.cancel')}</Button>
+            <Button
+              onClick={handleSendMessage}
+              disabled={sendMessage.isPending || !messageText.trim()}
+            >
+              {sendMessage.isPending ? t('common.processing') : t('orders.send_message')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

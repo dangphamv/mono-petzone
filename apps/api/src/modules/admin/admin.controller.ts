@@ -9,13 +9,16 @@ import {
   moderateReviewSchema,
   updateConfigSchema,
   adminMessageSchema,
+  adminCreateOrderSchema,
+  cancelOrderSchema,
 } from '@petzone/validators';
+import type { CancelOrderInput } from '@petzone/validators';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AdminService } from './admin.service';
-import { VerifyProviderDto, RequestInfoDto, ResolveDisputeDto, SuspendUserDto, ModerateReviewDto, UpdateConfigDto, AdminMessageDto } from './dto';
+import { VerifyProviderDto, RequestInfoDto, ResolveDisputeDto, SuspendUserDto, ModerateReviewDto, UpdateConfigDto, AdminMessageDto, AdminCreateOrderDto } from './dto';
 import {
   ok,
   okPaginated,
@@ -66,12 +69,32 @@ export class AdminController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: string,
+    @Query('search') search?: string,
   ) {
     return this.adminService.getProviders({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
       status,
+      search,
     });
+  }
+
+  @Get('providers/:id/rooms')
+  @ApiOperation({ summary: 'List active room types for a provider' })
+  @ApiResponse({ status: 200, description: 'Rooms returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  getProviderRooms(@Param('id') id: string) {
+    return this.adminService.getProviderRooms(id);
+  }
+
+  @Get('providers/:id/addons')
+  @ApiOperation({ summary: 'List active add-on services for a provider' })
+  @ApiResponse({ status: 200, description: 'Add-ons returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  getProviderAddOns(@Param('id') id: string) {
+    return this.adminService.getProviderAddOns(id);
   }
 
   @Get('providers/:id')
@@ -116,6 +139,28 @@ export class AdminController {
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
     });
+  }
+
+  @Post('orders')
+  @ApiOperation({ summary: 'Create a booking order on behalf of an owner' })
+  @ApiResponse({ status: 201, description: 'Order created' })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Owner / provider / room not found', schema: { example: ERROR_404 } })
+  createOrder(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(adminCreateOrderSchema)) body: AdminCreateOrderDto) {
+    return this.adminService.createOrder(user.id, body);
+  }
+
+  @Patch('orders/:id/cancel')
+  @ApiOperation({ summary: 'Cancel an order (admin override)' })
+  @ApiResponse({ status: 200, description: 'Order cancelled' })
+  @ApiResponse({ status: 400, description: 'Validation error or order not cancellable', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
+  cancelOrder(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(cancelOrderSchema)) body: CancelOrderInput) {
+    return this.adminService.cancelOrder(user.id, id, body.reason);
   }
 
   @Get('orders/export')
@@ -166,10 +211,17 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Users list returned', schema: { example: okPaginated([EXAMPLE_USER], 'Users list returned', 12450) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
-  getUsers(@Query('page') page?: string, @Query('limit') limit?: string) {
+  getUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('role') role?: string,
+    @Query('search') search?: string,
+  ) {
     return this.adminService.getUsers({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+      role,
+      search,
     });
   }
 
@@ -182,6 +234,37 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'User not found', schema: { example: ERROR_404 } })
   suspendUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(suspendUserSchema)) body: SuspendUserDto) {
     return this.adminService.suspendUser(user.id, id, body);
+  }
+
+  @Get('pets')
+  @ApiOperation({ summary: 'List all pets across the platform' })
+  @ApiResponse({ status: 200, description: 'Pets list returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  getPets(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('species') species?: string,
+    @Query('search') search?: string,
+    @Query('owner_id') ownerId?: string,
+  ) {
+    return this.adminService.getPets({
+      page: Number(page) || 1,
+      limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+      species,
+      search,
+      ownerId,
+    });
+  }
+
+  @Get('pets/:id')
+  @ApiOperation({ summary: 'Get pet detail with owner info' })
+  @ApiResponse({ status: 200, description: 'Pet detail returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Pet not found', schema: { example: ERROR_404 } })
+  getPetDetail(@Param('id') id: string) {
+    return this.adminService.getPetDetail(id);
   }
 
   @Get('reviews/flagged')

@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, PawPrint } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/lib/i18n'
 import {
@@ -18,7 +18,7 @@ import {
   Separator,
 } from '@petzone/ui'
 import { api } from '@/lib/api'
-import { useSuspendUser } from '@/lib/hooks/use-admin'
+import { useSuspendUser, useOwnerPets } from '@/lib/hooks/use-admin'
 
 const roleVariant = (r: string) =>
   r === 'admin' ? 'muted' : r === 'provider' ? 'default' : 'info'
@@ -42,6 +42,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     ),
   })
   const suspend = useSuspendUser()
+  const isOwner = (user?.role as string) === 'owner'
+  const { data: petsResp } = useOwnerPets(isOwner ? id : undefined)
+  const pets = petsResp?.data ?? []
   const [showModal, setShowModal] = useState(false)
   const [reason, setReason] = useState('')
   const [isPermanent, setIsPermanent] = useState(false)
@@ -140,6 +143,57 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
       </div>
+
+      {isOwner && (
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <PawPrint size={18} className="text-amber-600" />
+              {t('pets.title')}
+              <span className="text-sm font-normal text-muted-foreground">({pets.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('pets.empty')}</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {pets.map((p) => {
+                  const photo = Array.isArray(p.photos) && (p.photos as string[])[0]
+                  const species = p.species as string
+                  return (
+                    <Link
+                      key={p.id as string}
+                      href={`/pets/${p.id}`}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-primary hover:bg-muted/50"
+                    >
+                      <Avatar className="h-12 w-12">
+                        {photo ? <AvatarImage src={photo} alt={p.name as string} /> : null}
+                        <AvatarFallback className="bg-amber-50 text-amber-600">
+                          <PawPrint size={20} />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium">{p.name as string}</span>
+                          <Badge variant={p.is_active ? 'success' : 'destructive'} className="shrink-0 text-[10px]">
+                            {t(p.is_active ? 'pets.active' : 'pets.inactive')}
+                          </Badge>
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {t(`pets.species.${species}` as any)}
+                          {p.breed ? ` · ${p.breed as string}` : ''}
+                          {p.weight_kg != null ? ` · ${p.weight_kg}kg` : ''}
+                        </p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>

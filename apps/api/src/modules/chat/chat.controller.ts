@@ -95,4 +95,13 @@ export class ChatController {
   markRead(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.chatService.markRead(user.id, id);
   }
+
+  @Post('messages/:id/delivered')
+  @ApiOperation({ summary: 'Mark a single message as delivered (called by recipient on receive)' })
+  @ApiResponse({ status: 201, description: 'Message marked delivered (or already past sent)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 404, description: 'Message not found', schema: { example: ERROR_404 } })
+  markDelivered(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.chatService.markMessageDelivered(user.id, id);
+  }
 }

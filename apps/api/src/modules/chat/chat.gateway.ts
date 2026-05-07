@@ -118,7 +118,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const recipientSockets = await this.server.in(this.userRoom(recipientId)).fetchSockets()
     if (recipientSockets.length > 0) {
-      await this.chatService.markMessageDelivered(message.id)
+      await this.chatService.markMessageDelivered(recipientId, message.id)
     }
   }
 

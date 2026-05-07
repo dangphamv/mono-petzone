@@ -101,21 +101,6 @@ export class ChatService {
       .single()
     if (error || !message) throw new BadRequestException(error?.message ?? 'Failed to send message')
 
-    const isOwner = conversation.owner_id === userId
-    const unreadField = isOwner ? 'provider_unread_count' : 'owner_unread_count'
-    const currentCount = isOwner
-      ? conversation.provider_unread_count
-      : conversation.owner_unread_count
-
-    const { error: updateErr } = await this.supabase.client
-      .from('chat_conversations')
-      .update({
-        last_message_at: message.created_at,
-        [unreadField]: currentCount + 1,
-      })
-      .eq('id', conversationId)
-    if (updateErr) throw new BadRequestException(updateErr.message)
-
     this.events.emit(CHAT_EVENTS.MESSAGE_CREATED, { message, conversation })
 
     return message as ChatMessage
@@ -123,10 +108,8 @@ export class ChatService {
 
   async markRead(userId: string, conversationId: string) {
     const conversation = await this.verifyParticipant(userId, conversationId)
-
-    const isOwner = conversation.owner_id === userId
-    const unreadField = isOwner ? 'owner_unread_count' : 'provider_unread_count'
-    const otherUserId = isOwner ? conversation.provider_id : conversation.owner_id
+    const otherUserId =
+      conversation.owner_id === userId ? conversation.provider_id : conversation.owner_id
 
     const { data: updatedMessages, error: msgErr } = await this.supabase.client
       .from('chat_messages')
@@ -137,6 +120,8 @@ export class ChatService {
       .select('id')
     if (msgErr) throw new BadRequestException(msgErr.message)
 
+    const isOwner = conversation.owner_id === userId
+    const unreadField = isOwner ? 'owner_unread_count' : 'provider_unread_count'
     const { error: convErr } = await this.supabase.client
       .from('chat_conversations')
       .update({ [unreadField]: 0 })
@@ -187,7 +172,19 @@ export class ChatService {
     return updated as ChatMessage
   }
 
-  async markMessageDelivered(messageId: string) {
+  async markMessageDelivered(userId: string, messageId: string) {
+    const { data: message, error: fetchErr } = await this.supabase.client
+      .from('chat_messages')
+      .select(CHAT_MESSAGE_COLUMNS)
+      .eq('id', messageId)
+      .single()
+    if (fetchErr || !message) throw new NotFoundException('Message not found')
+
+    if (message.sender_id === userId) return message as ChatMessage
+    if (message.status !== 'sent') return message as ChatMessage
+
+    await this.verifyParticipant(userId, message.conversation_id)
+
     const { data, error } = await this.supabase.client
       .from('chat_messages')
       .update({ status: 'delivered' })
@@ -195,7 +192,7 @@ export class ChatService {
       .eq('status', 'sent')
       .select(CHAT_MESSAGE_COLUMNS)
       .single()
-    if (error || !data) return null
+    if (error || !data) return message as ChatMessage
 
     this.events.emit(CHAT_EVENTS.MESSAGE_DELIVERED, {
       messageId: data.id,
@@ -273,14 +270,19 @@ export class ChatService {
     if (userId !== ownerId && userId !== providerUserId)
       throw new ForbiddenException('Not a participant of this conversation')
 
-    let query = this.supabase.client
-      .from('chat_conversations')
-      .select(CHAT_CONVERSATION_COLUMNS)
-      .eq('owner_id', ownerId)
-      .eq('provider_id', providerUserId)
-    query = orderId ? query.eq('order_id', orderId) : query.is('order_id', null)
-    const { data: existing } = await query.maybeSingle()
-    if (existing) return existing as ChatConversation
+    const findExisting = async () => {
+      let q = this.supabase.client
+        .from('chat_conversations')
+        .select(CHAT_CONVERSATION_COLUMNS)
+        .eq('owner_id', ownerId)
+        .eq('provider_id', providerUserId)
+      q = orderId ? q.eq('order_id', orderId) : q.is('order_id', null)
+      const { data } = await q.maybeSingle()
+      return data as ChatConversation | null
+    }
+
+    const existing = await findExisting()
+    if (existing) return existing
 
     const { data: created, error: insertErr } = await this.supabase.client
       .from('chat_conversations')
@@ -288,13 +290,17 @@ export class ChatService {
         owner_id: ownerId,
         provider_id: providerUserId,
         order_id: orderId,
+        last_message_at: new Date().toISOString(),
       })
       .select(CHAT_CONVERSATION_COLUMNS)
       .single()
-    if (insertErr || !created)
-      throw new BadRequestException(insertErr?.message ?? 'Failed to create conversation')
+    if (created) return created as ChatConversation
 
-    return created as ChatConversation
+    if (insertErr?.code === '23505') {
+      const winner = await findExisting()
+      if (winner) return winner
+    }
+    throw new BadRequestException(insertErr?.message ?? 'Failed to create conversation')
   }
 
   private async verifyParticipant(

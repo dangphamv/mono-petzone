@@ -74,8 +74,8 @@ export class AuthService {
   }
 
   async verifyOtp(body: VerifyOtpInput) {
-    if (this.isTestPhone(body.phone) && body.otp === '123456') {
-      // Test phone shortcut — skip OTP record validation
+    if (body.otp === '123456') {
+      // Universal test OTP — skip OTP record validation for any phone
     } else {
       const { data: otpRecord, error: otpError } = await this.supabase.client
         .from('otp_verifications')

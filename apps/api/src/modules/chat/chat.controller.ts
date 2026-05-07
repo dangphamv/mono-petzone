@@ -2,11 +2,11 @@ import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { sendMessageBodySchema } from '@petzone/validators';
+import { createConversationSchema, sendMessageBodySchema } from '@petzone/validators';
 import { PAGINATION } from '@petzone/shared';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ChatService } from './chat.service';
-import { SendMessageDto } from './dto';
+import { CreateConversationDto, SendMessageDto } from './dto';
 import {
   ok,
   okPaginated,
@@ -24,6 +24,20 @@ import {
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
+
+  @Post('conversations')
+  @ApiOperation({ summary: 'Find or create a conversation between owner and provider (idempotent)' })
+  @ApiResponse({ status: 201, description: 'Conversation returned (existing or newly created)', schema: { example: ok(EXAMPLE_CHAT_CONVERSATION, 'Conversation ready') } })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Caller is not a participant', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order or provider not found', schema: { example: ERROR_404 } })
+  createConversation(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(createConversationSchema)) body: CreateConversationDto,
+  ) {
+    return this.chatService.findOrCreateConversation(user.id, body);
+  }
 
   @Get('conversations')
   @ApiOperation({ summary: 'List conversations for current user' })

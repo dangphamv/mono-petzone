@@ -18,3 +18,15 @@ export const sendMessageBodySchema = sendMessageBase.omit({ conversation_id: tru
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>
 export type SendMessageBodyInput = z.infer<typeof sendMessageBodySchema>
+
+export const createConversationSchema = z
+  .object({
+    provider_id: z.string().uuid().optional(),
+    owner_id: z.string().uuid().optional(),
+    order_id: z.string().uuid().optional(),
+  })
+  .refine((d) => !!d.provider_id || !!d.owner_id || !!d.order_id, {
+    message: 'order_id, provider_id, or owner_id is required',
+  })
+
+export type CreateConversationInput = z.infer<typeof createConversationSchema>

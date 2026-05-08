@@ -64,10 +64,26 @@ export default function ReviewsPage() {
       header: t('reviews.content'),
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="block max-w-[300px] truncate text-muted-foreground">
+        <span className="block max-w-[200px] truncate text-muted-foreground">
           {(row.original.text as string) || '-'}
         </span>
       ),
+    },
+    {
+      accessorKey: 'order_number',
+      header: t('reviews.order_number'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {(row.original.order_number as string) || '-'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'provider_name',
+      header: t('reviews.provider_name'),
+      enableSorting: false,
+      cell: ({ row }) => <span>{(row.original.provider_name as string) || '-'}</span>,
     },
     {
       id: 'visibility',

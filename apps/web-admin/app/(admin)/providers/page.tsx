@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2 } from 'lucide-react'
+import { Building2, Plus } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   Button, Badge,
@@ -132,14 +132,20 @@ export default function ProvidersPage() {
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="stat-icon bg-teal-50 text-teal-600">
-          <Building2 size={20} />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="stat-icon bg-teal-50 text-teal-600">
+            <Building2 size={20} />
+          </div>
+          <div>
+            <h1 className="page-header">{t('providers.title')}</h1>
+            <p className="page-description">{t('providers.subtitle')}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="page-header">{t('providers.title')}</h1>
-          <p className="page-description">{t('providers.subtitle')}</p>
-        </div>
+        <Button size="sm" className="gap-1">
+          <Plus size={14} />
+          {t('providers.add')}
+        </Button>
       </div>
 
       <DataTable

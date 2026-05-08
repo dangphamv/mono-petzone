@@ -26,6 +26,7 @@ export const vi = {
   'common.reason': 'Lý do',
   'common.view_detail': 'Xem chi tiết',
   'common.all_rights': 'All rights reserved.',
+  'common.type': 'Loại',
 
   // Status labels
   'status.pending': 'Chờ duyệt',
@@ -302,6 +303,66 @@ export const vi = {
   'config.saving': 'Đang lưu...',
   'config.saved': 'Cấu hình đã được lưu thành công',
   'config.current': 'Hiện tại',
+
+  // Dashboard - Action Required
+  'dashboard.action_required': 'Cần xử lý',
+  'dashboard.action_required_desc': 'Các mục cần admin xử lý ngay',
+  'dashboard.action_type': 'Loại',
+  'dashboard.action_subject': 'Đối tượng',
+  'dashboard.action_date': 'Ngày',
+  'dashboard.type_verification': 'Chờ xác minh',
+  'dashboard.type_dispute': 'Tranh chấp',
+  'dashboard.no_actions': 'Không có mục nào cần xử lý',
+  'dashboard.items_pending': 'mục cần xử lý',
+  'dashboard.item_name': 'Tên',
+  'dashboard.detail': 'Chi tiết',
+
+  // Provider - Add
+  'providers.add': 'Thêm đối tác',
+  'providers.recent_orders': 'Đơn hàng gần đây',
+  'providers.no_recent_orders': 'Chưa có đơn hàng nào',
+
+  // Orders - Extended info
+  'orders.payment_method': 'Phương thức thanh toán',
+  'orders.disbursement_status': 'Trạng thái giải ngân',
+  'orders.pet_info': 'Thông tin thú cưng',
+  'orders.addon_services': 'Dịch vụ bổ sung',
+  'orders.price_breakdown': 'Chi tiết giá',
+  'orders.checkin_photos': 'Ảnh check-in',
+  'orders.checkout_photos': 'Ảnh check-out',
+  'orders.base_price': 'Giá cơ bản',
+  'orders.addon_total': 'Dịch vụ thêm',
+  'orders.platform_fee': 'Phí nền tảng',
+  'orders.owner_name': 'Chủ pet',
+  'orders.provider_name': 'Đối tác',
+
+  // Users - Extended info
+  'users.pet_info': 'Thông tin thú cưng',
+  'users.default_address': 'Địa chỉ mặc định',
+  'users.recent_orders': 'Đơn hàng gần đây',
+  'users.no_recent_orders': 'Chưa có đơn hàng nào',
+  'users.no_pets': 'Chưa có thú cưng nào',
+
+  // Reviews - Extended
+  'reviews.order_number': 'Mã đơn',
+  'reviews.provider_name': 'Đối tác',
+  'reviews.reviewer': 'Người đánh giá',
+
+  // Config - Commission plans
+  'config.commission_plans': 'Gói hoa hồng',
+  'config.commission_plans_desc': 'Tạo các gói hoa hồng khác nhau cho đối tác',
+  'config.plan_name': 'Tên gói',
+  'config.plan_rate': 'Tỷ lệ (%)',
+  'config.plan_start': 'Ngày bắt đầu',
+  'config.plan_end': 'Ngày kết thúc',
+  'config.add_plan': 'Thêm gói',
+  'config.remove_plan': 'Xóa',
+  'config.plan_description': 'Mô tả',
+
+  // Login - Extended
+  'login.language': 'Ngôn ngữ',
+  'login.error_credentials': 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.',
+  'login.error_network': 'Không thể kết nối đến server. Vui lòng thử lại sau.',
 
   // DataTable
   'table.showing_results': 'Hiển thị {from}-{to} / {total}',

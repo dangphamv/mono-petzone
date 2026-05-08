@@ -26,6 +26,7 @@ export const en = {
   'common.reason': 'Reason',
   'common.view_detail': 'View detail',
   'common.all_rights': 'All rights reserved.',
+  'common.type': 'Type',
 
   // Status labels
   'status.pending': 'Pending',
@@ -302,6 +303,66 @@ export const en = {
   'config.saving': 'Saving...',
   'config.saved': 'Settings saved successfully',
   'config.current': 'Current',
+
+  // Dashboard - Action Required
+  'dashboard.action_required': 'Action Required',
+  'dashboard.action_required_desc': 'Items that need admin attention',
+  'dashboard.action_type': 'Type',
+  'dashboard.action_subject': 'Subject',
+  'dashboard.action_date': 'Date',
+  'dashboard.type_verification': 'Pending Verification',
+  'dashboard.type_dispute': 'Dispute',
+  'dashboard.no_actions': 'No items require action',
+  'dashboard.items_pending': 'items pending',
+  'dashboard.item_name': 'Name',
+  'dashboard.detail': 'Detail',
+
+  // Provider - Add
+  'providers.add': 'Add Provider',
+  'providers.recent_orders': 'Recent Orders',
+  'providers.no_recent_orders': 'No orders yet',
+
+  // Orders - Extended info
+  'orders.payment_method': 'Payment Method',
+  'orders.disbursement_status': 'Disbursement Status',
+  'orders.pet_info': 'Pet Information',
+  'orders.addon_services': 'Add-on Services',
+  'orders.price_breakdown': 'Price Breakdown',
+  'orders.checkin_photos': 'Check-in Photos',
+  'orders.checkout_photos': 'Check-out Photos',
+  'orders.base_price': 'Base Price',
+  'orders.addon_total': 'Add-ons',
+  'orders.platform_fee': 'Platform Fee',
+  'orders.owner_name': 'Pet Owner',
+  'orders.provider_name': 'Provider',
+
+  // Users - Extended info
+  'users.pet_info': 'Pet Information',
+  'users.default_address': 'Default Address',
+  'users.recent_orders': 'Recent Orders',
+  'users.no_recent_orders': 'No orders yet',
+  'users.no_pets': 'No pets registered',
+
+  // Reviews - Extended
+  'reviews.order_number': 'Order #',
+  'reviews.provider_name': 'Provider',
+  'reviews.reviewer': 'Reviewer',
+
+  // Config - Commission plans
+  'config.commission_plans': 'Commission Plans',
+  'config.commission_plans_desc': 'Create different commission rate plans for providers',
+  'config.plan_name': 'Plan Name',
+  'config.plan_rate': 'Rate (%)',
+  'config.plan_start': 'Start Date',
+  'config.plan_end': 'End Date',
+  'config.add_plan': 'Add Plan',
+  'config.remove_plan': 'Remove',
+  'config.plan_description': 'Description',
+
+  // Login - Extended
+  'login.language': 'Language',
+  'login.error_credentials': 'Invalid email or password. Please check and try again.',
+  'login.error_network': 'Cannot connect to server. Please try again later.',
 
   // DataTable
   'table.showing_results': 'Showing {from}-{to} of {total}',

@@ -2,8 +2,9 @@
 
 import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, PawPrint } from 'lucide-react'
+import { ArrowLeft, PawPrint, MapPin, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import {
   Button,
@@ -19,6 +20,7 @@ import {
 } from '@petzone/ui'
 import { api } from '@/lib/api'
 import { useSuspendUser, useOwnerPets } from '@/lib/hooks/use-admin'
+import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
 
 const roleVariant = (r: string) =>
   r === 'admin' ? 'muted' : r === 'provider' ? 'default' : 'info'
@@ -32,9 +34,14 @@ const STATUS_KEY: Record<string, string> = {
   active: 'status.active', suspended: 'status.suspended', banned: 'status.banned',
 }
 
+const ORDER_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'destructive' | 'default'> = {
+  completed: 'success', disputed: 'destructive', cancelled: 'destructive', pending: 'warning',
+}
+
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = useI18n()
   const { id } = use(params)
+  const router = useRouter()
   const { data: user, isLoading } = useQuery<Record<string, unknown>>({
     queryKey: ['admin', 'user', id],
     queryFn: () => api(`/admin/users?page=1&limit=100`).then((res: any) =>
@@ -144,18 +151,34 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </Card>
       </div>
 
+      {/* Default Address */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin size={16} />
+            {t('users.default_address')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {(user.default_address as string) || '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM'}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Pet Information - uses real API data from useOwnerPets */}
       {isOwner && (
         <Card className="mt-6">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2">
               <PawPrint size={18} className="text-amber-600" />
-              {t('pets.title')}
+              {t('users.pet_info')}
               <span className="text-sm font-normal text-muted-foreground">({pets.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {pets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('pets.empty')}</p>
+              <p className="text-sm text-muted-foreground">{t('users.no_pets')}</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {pets.map((p) => {
@@ -181,7 +204,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                           </Badge>
                         </div>
                         <p className="truncate text-xs text-muted-foreground">
-                          {t(`pets.species.${species}` as any)}
+                          {species}
                           {p.breed ? ` · ${p.breed as string}` : ''}
                           {p.weight_kg != null ? ` · ${p.weight_kg}kg` : ''}
                         </p>
@@ -194,6 +217,52 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
       )}
+
+      {/* Recent 5 Orders */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList size={16} />
+            {t('users.recent_orders')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {MOCK_RECENT_ORDERS.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('users.no_recent_orders')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium">{t('orders.order_number')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('common.status')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('orders.check_in')}</th>
+                    <th className="pb-2 font-medium">{t('orders.total_price')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MOCK_RECENT_ORDERS.map((ord) => (
+                    <tr
+                      key={ord.id}
+                      className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => router.push(`/orders/${ord.id}`)}
+                    >
+                      <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number}</td>
+                      <td className="py-2.5 pr-4">
+                        <Badge variant={ORDER_STATUS_VARIANT[ord.status] || 'default'}>
+                          {t(`status.${ord.status}` as any)}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date)}</td>
+                      <td className="py-2.5 font-medium">{formatVND(ord.total_price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>
@@ -245,4 +314,8 @@ function InfoRow({ label, value }: { label: string; value: string | undefined | 
 function formatDate(d: string | undefined | null) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatVND(n: number) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 }

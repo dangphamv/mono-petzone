@@ -2,6 +2,7 @@
 
 import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import {
   Button,
   Badge,
@@ -11,18 +12,24 @@ import {
   Separator,
   Skeleton,
 } from '@petzone/ui'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useVerifyProvider } from '@/lib/hooks/use-admin'
 import { useI18n } from '@/lib/i18n'
+import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
 
 const statusVariant = (s: string) =>
   s === 'approved' ? 'success' : s === 'rejected' ? 'destructive' : 'warning'
 
+const ORDER_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'destructive' | 'default'> = {
+  completed: 'success', disputed: 'destructive', cancelled: 'destructive', pending: 'warning',
+}
+
 export default function ProviderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { t } = useI18n()
+  const router = useRouter()
 
   const statusLabel = (s: string) =>
     s === 'approved' ? t('status.approved') : s === 'rejected' ? t('status.rejected') : t('status.pending')
@@ -161,20 +168,71 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
         </Card>
       </div>
 
+      {/* Facility Photos - Clean Grid */}
       {Array.isArray(provider.facility_photos) && provider.facility_photos.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>{t('providers.photos')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {(provider.facility_photos as string[]).map((url, i) => (
-                <img key={i} src={url} alt={`Facility ${i + 1}`} className="h-32 w-full rounded-lg object-cover" />
+                <div key={i} className="aspect-[4/3] overflow-hidden rounded-lg border">
+                  <img src={url} alt={`Facility ${i + 1}`} className="h-full w-full object-cover" />
+                </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Recent 5 Orders */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList size={16} />
+            {t('providers.recent_orders')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {MOCK_RECENT_ORDERS.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('providers.no_recent_orders')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium">{t('orders.order_number')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('common.status')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('orders.check_in')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('orders.pet_info')}</th>
+                    <th className="pb-2 font-medium text-right">{t('orders.total_price')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MOCK_RECENT_ORDERS.map((ord) => (
+                    <tr
+                      key={ord.id}
+                      className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => router.push(`/orders/${ord.id}`)}
+                    >
+                      <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number}</td>
+                      <td className="py-2.5 pr-4">
+                        <Badge variant={ORDER_STATUS_VARIANT[ord.status] || 'default'}>
+                          {t(`status.${ord.status}` as any)}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date)}</td>
+                      <td className="py-2.5 pr-4">{ord.pet_name}</td>
+                      <td className="py-2.5 text-right font-medium">{formatVND(ord.total_price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={action !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>
@@ -215,4 +273,8 @@ function InfoRow({ label, value }: { label: string; value: string | undefined | 
 function formatDate(d: string | undefined) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatVND(n: number) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 }

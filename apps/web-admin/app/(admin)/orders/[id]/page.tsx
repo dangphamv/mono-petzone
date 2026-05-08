@@ -1,8 +1,8 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, CreditCard, PawPrint, Camera, Receipt } from 'lucide-react'
 import Link from 'next/link'
 import {
   Badge,
@@ -16,6 +16,7 @@ import {
 } from '@petzone/ui'
 import { api } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
+import { MOCK_ORDER_EXTENDED } from '@/lib/mock-data'
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -36,12 +37,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     const config = STATUS_MAP[status] ?? { variant: 'default' as const, label: status }
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
+
   const { data: order, isLoading } = useQuery<Record<string, unknown>>({
     queryKey: ['admin', 'order', id],
     queryFn: () => api(`/admin/orders?page=1&limit=100`).then((res: any) =>
       res.data?.find((o: any) => o.id === id) || null
     ),
   })
+
+  // Collapsible sections state
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    payment: true,
+    pet: true,
+    price: false,
+    photos: false,
+    addons: false,
+  })
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   if (isLoading) {
     return (
@@ -77,7 +92,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const provider = order.providers as Record<string, unknown> | Record<string, unknown>[] | null
   const providerName = provider
     ? (Array.isArray(provider) ? provider[0]?.business_name : provider?.business_name) as string
-    : '-'
+    : MOCK_ORDER_EXTENDED.provider_name
+
+  const ext = MOCK_ORDER_EXTENDED
 
   return (
     <div>
@@ -97,13 +114,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <Separator className="my-6" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Basic Order Info */}
         <Card>
           <CardHeader>
             <CardTitle>{t('orders.detail')}</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              <InfoRow label={t('orders.provider')} value={providerName} />
+              <InfoRow label={t('orders.owner_name')} value={ext.owner_name} />
+              <InfoRow label={t('orders.provider_name')} value={providerName} />
               <InfoRow label={t('orders.check_in')} value={formatDate(order.check_in_date as string)} />
               <InfoRow label={t('orders.check_out')} value={formatDate(order.check_out_date as string)} />
               <InfoRow label={t('orders.num_nights')} value={String(order.num_nights ?? '-')} />
@@ -113,26 +132,142 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardContent>
         </Card>
 
+        {/* Payment & Disbursement */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('orders.additional_info')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard size={16} />
+              {t('orders.payment_method')} / {t('orders.disbursement_status')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              <InfoRow label="Owner ID" value={order.owner_id as string} />
-              <InfoRow label="Provider ID" value={order.provider_id as string} />
+              <InfoRow label={t('orders.payment_method')} value={ext.payment_method} />
+              <InfoRow label={t('orders.disbursement_status')} value={
+                <Badge variant={ext.disbursement_status === 'completed' ? 'success' : 'warning'}>
+                  {ext.disbursement_status === 'completed' ? 'Đã giải ngân' : 'Chờ giải ngân'}
+                </Badge>
+              } />
             </dl>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Collapsible Sections */}
+      <div className="mt-6 space-y-4">
+        {/* Pet Information */}
+        <CollapsibleCard
+          title={t('orders.pet_info')}
+          icon={<PawPrint size={16} />}
+          open={openSections.pet}
+          onToggle={() => toggleSection('pet')}
+        >
+          <dl className="space-y-3 text-sm">
+            <InfoRow label="Tên" value={ext.pet_info.name} />
+            <InfoRow label="Loại" value={ext.pet_info.species} />
+            <InfoRow label="Giống" value={ext.pet_info.breed} />
+            <InfoRow label="Cân nặng" value={`${ext.pet_info.weight_kg} kg`} />
+          </dl>
+        </CollapsibleCard>
+
+        {/* Price Breakdown */}
+        <CollapsibleCard
+          title={t('orders.price_breakdown')}
+          icon={<Receipt size={16} />}
+          open={openSections.price}
+          onToggle={() => toggleSection('price')}
+        >
+          <dl className="space-y-3 text-sm">
+            <InfoRow label={t('orders.base_price')} value={formatVND(ext.price_breakdown.base_price)} />
+            <InfoRow label={t('orders.addon_total')} value={formatVND(ext.price_breakdown.addon_total)} />
+            <InfoRow label={t('orders.platform_fee')} value={formatVND(ext.price_breakdown.platform_fee)} />
+            <Separator />
+            <InfoRow label={t('orders.total_price')} value={<strong>{formatVND(ext.price_breakdown.total)}</strong>} />
+          </dl>
+        </CollapsibleCard>
+
+        {/* Add-on Services */}
+        <CollapsibleCard
+          title={t('orders.addon_services')}
+          icon={<span className="text-sm">+</span>}
+          open={openSections.addons}
+          onToggle={() => toggleSection('addons')}
+        >
+          <div className="space-y-2">
+            {ext.addon_services.map((svc, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span>{svc.name}</span>
+                <span className="font-medium">{formatVND(svc.price)}</span>
+              </div>
+            ))}
+          </div>
+        </CollapsibleCard>
+
+        {/* Check-in/Check-out Photos */}
+        <CollapsibleCard
+          title={`${t('orders.checkin_photos')} / ${t('orders.checkout_photos')}`}
+          icon={<Camera size={16} />}
+          open={openSections.photos}
+          onToggle={() => toggleSection('photos')}
+        >
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">{t('orders.checkin_photos')}</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {ext.checkin_photos.map((url, i) => (
+                  <img key={i} src={url} alt={`Check-in ${i + 1}`} className="h-24 w-full rounded-lg object-cover border" />
+                ))}
+              </div>
+            </div>
+            <Separator />
+            <div>
+              <h4 className="text-sm font-medium mb-2">{t('orders.checkout_photos')}</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {ext.checkout_photos.map((url, i) => (
+                  <img key={i} src={url} alt={`Check-out ${i + 1}`} className="h-24 w-full rounded-lg object-cover border" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </CollapsibleCard>
       </div>
     </div>
   )
 }
 
-function InfoRow({ label, value }: { label: string; value: string | undefined | null }) {
+function CollapsibleCard({ title, icon, open, onToggle, children }: {
+  title: string
+  icon: React.ReactNode
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Card>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors rounded-t-xl"
+        onClick={onToggle}
+      >
+        <span className="flex items-center gap-2 font-medium text-sm">
+          {icon}
+          {title}
+        </span>
+        {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      </button>
+      {open && (
+        <CardContent className="pt-0 pb-4 px-4">
+          {children}
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode | string | undefined | null }) {
   return (
     <div className="flex gap-2">
-      <dt className="w-32 shrink-0 text-muted-foreground">{label}</dt>
+      <dt className="w-36 shrink-0 text-muted-foreground">{label}</dt>
       <dd>{value || '-'}</dd>
     </div>
   )

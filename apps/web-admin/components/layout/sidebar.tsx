@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn, Avatar, AvatarFallback } from '@petzone/ui'
 import {
   LayoutDashboard, Building2, ClipboardList, AlertTriangle,
-  Users, Star, BarChart3, Settings, LogOut, Globe, PawPrint,
+  Users, Star, BarChart3, Settings, LogOut, Globe, PawPrint, ShieldCheck,
 } from 'lucide-react'
 import { useLogout } from '@/lib/hooks/use-auth'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
@@ -21,6 +21,7 @@ const navItems: { href: string; labelKey: TranslationKey; icon: typeof LayoutDas
   { href: '/pets', labelKey: 'nav.pets', icon: PawPrint },
   { href: '/reviews', labelKey: 'nav.reviews', icon: Star },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/staff', labelKey: 'nav.staff', icon: ShieldCheck },
   { href: '/config', labelKey: 'nav.config', icon: Settings },
 ]
 

@@ -364,6 +364,26 @@ export const en = {
   'login.error_credentials': 'Invalid email or password. Please check and try again.',
   'login.error_network': 'Cannot connect to server. Please try again later.',
 
+  // Staff Management
+  'nav.staff': 'Staff',
+  'staff.title': 'Staff Management',
+  'staff.subtitle': 'Add staff and manage access permissions',
+  'staff.add': 'Add Staff',
+  'staff.add_title': 'Add New Staff Member',
+  'staff.add_desc': 'Invite a new team member and assign their role',
+  'staff.email': 'Email',
+  'staff.name': 'Name',
+  'staff.remove_title': 'Remove Staff',
+  'staff.remove_desc': 'Are you sure you want to remove',
+  'staff.note': 'Super Admins have full access and cannot be restricted. Only Super Admins can modify permissions.',
+  'staff.perm_providers': 'Providers',
+  'staff.perm_orders': 'Orders',
+  'staff.perm_disputes': 'Disputes',
+  'staff.perm_users': 'Users',
+  'staff.perm_reviews': 'Reviews',
+  'staff.perm_analytics': 'Analytics',
+  'staff.perm_config': 'Settings',
+
   // DataTable
   'table.showing_results': 'Showing {from}-{to} of {total}',
   'table.rows_per_page': 'Rows',

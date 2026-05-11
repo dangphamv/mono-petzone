@@ -13,6 +13,7 @@ import { useI18n } from '@/lib/i18n'
 import { useUsers, useSuspendUser } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
+import { displayId } from '@/lib/display-id'
 
 type User = Record<string, unknown>
 
@@ -55,6 +56,14 @@ export default function UsersPage() {
   const closeDialog = () => { setSelected(null); setReason(''); setIsPermanent(false) }
 
   const columns = useMemo<ColumnDef<User, unknown>[]>(() => [
+    {
+      accessorKey: 'display_id',
+      header: 'ID',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">{displayId(row.original, 'U')}</span>
+      ),
+    },
     {
       accessorKey: 'full_name',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('users.name')} />,

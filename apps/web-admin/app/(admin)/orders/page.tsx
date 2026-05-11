@@ -227,7 +227,7 @@ export default function OrdersPage() {
         onPageSizeChange={table.setPageSize}
         searchValue={table.search}
         onSearchChange={table.setSearch}
-        searchPlaceholder={`${t('common.search')} ${t('orders.order_number').toLowerCase()}...`}
+        searchPlaceholder={t('orders.search_placeholder')}
         activeFilters={table.filters}
         isLoading={isLoading}
         emptyIcon={ClipboardList}

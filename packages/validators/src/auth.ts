@@ -27,9 +27,15 @@ export const refreshTokenSchema = z.object({
   refresh_token: z.string().min(1),
 })
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Email không hợp lệ'),
+  redirect_to: z.string().url().optional(),
+})
+
 export type SendOtpInput = z.infer<typeof sendOtpSchema>
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>
 export type LoginInput = z.infer<typeof loginSchema>
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>
 export type SelectRoleInput = z.infer<typeof selectRoleSchema>
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>

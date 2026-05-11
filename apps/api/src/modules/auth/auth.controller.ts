@@ -11,10 +11,11 @@ import {
   googleAuthSchema,
   refreshTokenSchema,
   selectRoleSchema,
+  forgotPasswordSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AuthService } from './auth.service';
-import { SendOtpDto, VerifyOtpDto, LoginDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto } from './dto';
+import { SendOtpDto, VerifyOtpDto, LoginDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto, ForgotPasswordDto } from './dto';
 import {
   ok,
   EXAMPLE_OTP_SENT,
@@ -76,6 +77,17 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid Google ID token', schema: { example: ERROR_400 } })
   google(@Body(new ZodValidationPipe(googleAuthSchema)) body: GoogleAuthDto) {
     return this.authService.google(body);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @ApiOperation({ summary: 'Send password reset email' })
+  @ApiResponse({ status: 201, description: 'Reset email sent (always returns success to prevent email enumeration)' })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 429, description: 'Too many requests', schema: { example: ERROR_429 } })
+  forgotPassword(@Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body);
   }
 
   @Post('refresh')

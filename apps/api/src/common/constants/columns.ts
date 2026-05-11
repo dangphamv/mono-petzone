@@ -1,11 +1,11 @@
-export const USER_COLUMNS = 'id, phone, email, full_name, avatar_url, role, status, social_provider, social_id, notification_preferences, terms_accepted_at, last_login_at, created_at, updated_at';
-export const USER_PUBLIC_COLUMNS = 'id, full_name, avatar_url, role';
+export const USER_COLUMNS = 'id, display_id, phone, email, full_name, avatar_url, role, status, social_provider, social_id, notification_preferences, terms_accepted_at, last_login_at, created_at, updated_at';
+export const USER_PUBLIC_COLUMNS = 'id, display_id, full_name, avatar_url, role';
 
-export const PET_COLUMNS = 'id, owner_id, name, species, breed, gender, date_of_birth, weight_kg, color, photos, vaccination_records, allergies, chronic_conditions, current_medications, is_neutered, temperament, sociable_with_others, special_needs_notes, emergency_vet_name, emergency_vet_phone, is_active, created_at, updated_at';
+export const PET_COLUMNS = 'id, display_id, owner_id, name, species, breed, gender, date_of_birth, weight_kg, color, photos, vaccination_records, allergies, chronic_conditions, current_medications, is_neutered, temperament, sociable_with_others, special_needs_notes, emergency_vet_name, emergency_vet_phone, is_active, created_at, updated_at';
 export const BREED_COLUMNS = 'id, species, name_vi, name_en, popularity_rank';
 
-export const PROVIDER_COLUMNS = 'id, user_id, business_name, description, license_number, license_photos, address, latitude, longitude, phone, facility_photos, certification_photos, accepted_species, weight_limit_min_kg, weight_limit_max_kg, cancellation_policy, verification_status, rating_average, rating_count, is_active, created_at, updated_at';
-export const PROVIDER_LIST_COLUMNS = 'id, business_name, address, latitude, longitude, facility_photos, accepted_species, cancellation_policy, rating_average, rating_count, is_active';
+export const PROVIDER_COLUMNS = 'id, display_id, user_id, business_name, description, license_number, license_photos, address, latitude, longitude, phone, facility_photos, certification_photos, accepted_species, weight_limit_min_kg, weight_limit_max_kg, cancellation_policy, verification_status, rating_average, rating_count, is_active, created_at, updated_at';
+export const PROVIDER_LIST_COLUMNS = 'id, display_id, business_name, address, latitude, longitude, facility_photos, accepted_species, cancellation_policy, rating_average, rating_count, is_active';
 export const ROOM_COLUMNS = 'id, provider_id, name, description, capacity, price_per_night, photos, is_active, created_at, updated_at';
 export const ADDON_COLUMNS = 'id, provider_id, name, description, price, price_type, is_active, created_at, updated_at';
 

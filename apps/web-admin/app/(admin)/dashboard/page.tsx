@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Building2, ClipboardList, AlertTriangle, Users, Clock, TrendingUp, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, ClipboardList, AlertTriangle, Users, TrendingUp, ArrowRight } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Badge } from '@petzone/ui'
 import { useDashboard, useProviders, useDisputes } from '@/lib/hooks/use-admin'
@@ -9,21 +10,20 @@ import { useDashboard, useProviders, useDisputes } from '@/lib/hooks/use-admin'
 const iconBg: Record<string, string> = {
   users: 'bg-blue-50 text-blue-600',
   providers: 'bg-teal-50 text-teal-600',
-  pending: 'bg-amber-50 text-amber-600',
   orders: 'bg-violet-50 text-violet-600',
   disputes: 'bg-red-50 text-red-600',
 }
 
 export default function DashboardPage() {
   const { t } = useI18n()
+  const router = useRouter()
   const { data, isLoading } = useDashboard()
-  const { data: pendingProviders } = useProviders({ page: 1, limit: 5, filters: { verification_status: ['pending'] } })
+  const { data: pendingProviders } = useProviders({ page: 1, limit: 5, filters: { status: ['pending'] } })
   const { data: openDisputes } = useDisputes({ page: 1, limit: 5, filters: { status: ['open'] } })
 
   const stats = [
     { key: 'users', title: t('dashboard.total_users'), value: data?.total_users ?? 0, icon: Users, href: '/users', change: '+12%' },
     { key: 'providers', title: t('dashboard.total_providers'), value: data?.total_providers ?? 0, icon: Building2, href: '/providers', change: '+5%' },
-    { key: 'pending', title: t('dashboard.pending_verifications'), value: data?.pending_verifications ?? 0, icon: Clock, href: '/providers', change: null },
     { key: 'orders', title: t('dashboard.active_orders'), value: data?.active_orders ?? 0, icon: ClipboardList, href: '/orders', change: '+8%' },
     { key: 'disputes', title: t('dashboard.open_disputes'), value: data?.open_disputes ?? 0, icon: AlertTriangle, href: '/disputes', change: null },
   ]
@@ -55,7 +55,7 @@ export default function DashboardPage() {
         <p className="page-description">{t('dashboard.subtitle')}</p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.key} href={s.href} className="group">
             <Card className="card-elevated h-full transition-all duration-200 group-hover:-translate-y-0.5">
@@ -120,6 +120,7 @@ export default function DashboardPage() {
                   {actionItems.map((item) => (
                     <tr
                       key={item.id}
+                      onClick={() => router.push(item.href)}
                       className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
                     >
                       <td className="py-3 pr-4">
@@ -133,9 +134,9 @@ export default function DashboardPage() {
                         {item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '-'}
                       </td>
                       <td className="py-3">
-                        <Link href={item.href} className="text-primary hover:text-primary/80">
+                        <span className="text-primary">
                           <ArrowRight size={16} />
-                        </Link>
+                        </span>
                       </td>
                     </tr>
                   ))}

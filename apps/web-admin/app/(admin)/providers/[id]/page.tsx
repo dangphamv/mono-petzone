@@ -18,6 +18,7 @@ import { api } from '@/lib/api'
 import { useVerifyProvider } from '@/lib/hooks/use-admin'
 import { useI18n } from '@/lib/i18n'
 import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
+import { displayId } from '@/lib/display-id'
 
 const statusVariant = (s: string) =>
   s === 'approved' ? 'success' : s === 'rejected' ? 'destructive' : 'warning'
@@ -95,7 +96,12 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
 
       <div className="mt-4 flex items-start justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold">{provider.business_name as string}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-bold">{provider.business_name as string}</h1>
+            <span className="rounded-md border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              {displayId(provider, 'P')}
+            </span>
+          </div>
           <Badge variant={statusVariant(provider.verification_status as string)} className="mt-1">
             {statusLabel(provider.verification_status as string)}
           </Badge>
@@ -134,11 +140,9 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>{t('providers.owner_info')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-3 text-sm">
+          <CardContent className="pt-6">
+            <h3 className="font-heading text-base font-semibold">{t('providers.owner_info')}</h3>
+            <dl className="mt-3 space-y-3 text-sm">
               <InfoRow label={t('providers.name')} value={ownerInfo?.full_name as string} />
               <InfoRow label={t('providers.email')} value={ownerInfo?.email as string} />
             </dl>

@@ -34,6 +34,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _migrations: {
+        Row: {
+          applied_at: string
+          name: string
+        }
+        Insert: {
+          applied_at?: string
+          name: string
+        }
+        Update: {
+          applied_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       add_on_services: {
         Row: {
           created_at: string
@@ -974,6 +989,7 @@ export type Database = {
           created_at: string
           current_medications: Json
           date_of_birth: string | null
+          display_id: string | null
           emergency_vet_name: string | null
           emergency_vet_phone: string | null
           gender: string
@@ -999,6 +1015,7 @@ export type Database = {
           created_at?: string
           current_medications?: Json
           date_of_birth?: string | null
+          display_id?: string | null
           emergency_vet_name?: string | null
           emergency_vet_phone?: string | null
           gender?: string
@@ -1024,6 +1041,7 @@ export type Database = {
           created_at?: string
           current_medications?: Json
           date_of_birth?: string | null
+          display_id?: string | null
           emergency_vet_name?: string | null
           emergency_vet_phone?: string | null
           gender?: string
@@ -1162,6 +1180,7 @@ export type Database = {
           certification_photos: string[]
           created_at: string
           description: string | null
+          display_id: string | null
           facility_photos: string[]
           id: string
           is_active: boolean
@@ -1189,6 +1208,7 @@ export type Database = {
           certification_photos?: string[]
           created_at?: string
           description?: string | null
+          display_id?: string | null
           facility_photos?: string[]
           id?: string
           is_active?: boolean
@@ -1216,6 +1236,7 @@ export type Database = {
           certification_photos?: string[]
           created_at?: string
           description?: string | null
+          display_id?: string | null
           facility_photos?: string[]
           id?: string
           is_active?: boolean
@@ -1658,6 +1679,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          display_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -1674,6 +1696,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          display_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -1690,6 +1713,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          display_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string

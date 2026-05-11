@@ -33,3 +33,13 @@ export function useLogout() {
     window.location.href = '/login'
   }
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (body: { email: string; redirect_to?: string }) =>
+      api<{ data: { sent: boolean } }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  })
+}

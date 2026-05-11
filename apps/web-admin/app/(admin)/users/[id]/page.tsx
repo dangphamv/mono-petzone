@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
-import { ArrowLeft, PawPrint, MapPin, ClipboardList, Ban } from 'lucide-react'
+import { ArrowLeft, PawPrint, MapPin, ClipboardList, Ban, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
@@ -17,7 +17,7 @@ import {
   Avatar, AvatarImage, AvatarFallback,
   Separator,
 } from '@petzone/ui'
-import { useSuspendUser, useOwnerPets, useUserDetail } from '@/lib/hooks/use-admin'
+import { useSuspendUser, useReactivateUser, useOwnerPets, useUserDetail } from '@/lib/hooks/use-admin'
 import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
 
 const roleVariant = (r: string) =>
@@ -42,12 +42,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { data: user, isLoading } = useUserDetail(id)
   const suspend = useSuspendUser()
+  const reactivate = useReactivateUser()
   const isOwner = (user?.role as string) === 'owner'
   const { data: petsResp } = useOwnerPets(isOwner ? id : undefined)
   const pets = petsResp?.data ?? []
   const [showModal, setShowModal] = useState(false)
   const [reason, setReason] = useState('')
   const [isPermanent, setIsPermanent] = useState(false)
+  const [showReactivate, setShowReactivate] = useState(false)
+  const [reactivateNote, setReactivateNote] = useState('')
 
   if (isLoading) {
     return (
@@ -82,6 +85,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const closeDialog = () => { setShowModal(false); setReason(''); setIsPermanent(false) }
+
+  const handleReactivate = () => {
+    reactivate.mutate(
+      { id, note: reactivateNote || undefined },
+      { onSuccess: () => { setShowReactivate(false); setReactivateNote('') } },
+    )
+  }
+  const closeReactivate = () => { setShowReactivate(false); setReactivateNote('') }
 
   return (
     <div>
@@ -123,14 +134,20 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                 <Ban size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-heading font-semibold text-destructive">{t('users.suspension_info')}</h3>
-                  <Badge variant="destructive">
-                    {t((STATUS_KEY[user.status as string] || 'status.suspended') as any)}
-                  </Badge>
-                  {s?.is_permanent && (
-                    <Badge variant="destructive">{t('users.permanent_ban')}</Badge>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-heading font-semibold text-destructive">{t('users.suspension_info')}</h3>
+                    <Badge variant="destructive">
+                      {t((STATUS_KEY[user.status as string] || 'status.suspended') as any)}
+                    </Badge>
+                    {s?.is_permanent && (
+                      <Badge variant="destructive">{t('users.permanent_ban')}</Badge>
+                    )}
+                  </div>
+                  <Button size="sm" className="gap-1.5" onClick={() => setShowReactivate(true)}>
+                    <CheckCircle2 size={14} />
+                    {t('users.reactivate')}
+                  </Button>
                 </div>
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex gap-2">
@@ -292,6 +309,31 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showReactivate} onOpenChange={(open) => { if (!open) closeReactivate() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('users.reactivate_title')}</DialogTitle>
+            <DialogDescription>
+              {t('users.reactivate_desc')} <strong>{user.full_name as string}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t('users.reactivate_note')}</Label>
+            <Textarea
+              rows={3}
+              value={reactivateNote}
+              onChange={(e) => setReactivateNote(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReactivate}>{t('common.cancel')}</Button>
+            <Button onClick={handleReactivate} disabled={reactivate.isPending}>
+              {reactivate.isPending ? t('common.processing') : t('users.reactivate_confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>

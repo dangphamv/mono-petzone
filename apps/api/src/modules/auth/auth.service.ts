@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +25,26 @@ export class AuthService {
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
   ) {}
+
+  private assertAccountActive(user: { status?: string | null; id?: string } | null | undefined) {
+    if (!user) return;
+    const status = user.status;
+    if (status === 'banned') {
+      throw new ForbiddenException('Your account has been banned. Please contact support.');
+    }
+    if (status === 'suspended') {
+      throw new ForbiddenException('Your account is suspended. Please contact support.');
+    }
+  }
+
+  private async assertActiveByUserId(userId: string) {
+    const { data } = await this.supabase.client
+      .from('users')
+      .select('status')
+      .eq('id', userId)
+      .maybeSingle();
+    this.assertAccountActive(data as { status?: string | null } | null);
+  }
 
   private normalizePhone(phone: string): string {
     // +84342232085 or 84342232085 → 0342232085
@@ -134,6 +155,9 @@ export class AuthService {
       .single();
 
     if (existingUser) {
+      // Block suspended / banned accounts before issuing a session
+      this.assertAccountActive(existingUser as { status?: string | null });
+
       // Existing user — OTP login
       // Get auth user to find their email, set derived password for session
       const { data: { user: authUser } } = await this.supabase.client.auth.admin
@@ -247,16 +271,18 @@ export class AuthService {
 
     if (error) throw new UnauthorizedException(error.message);
 
-    await this.supabase.client
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', data.user.id);
-
     const { data: user } = await this.supabase.client
       .from('users')
       .select(USER_COLUMNS)
       .eq('id', data.user.id)
       .single();
+
+    this.assertAccountActive(user as { status?: string | null } | null);
+
+    await this.supabase.client
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', data.user.id);
 
     return {
       access_token: data.session.access_token,
@@ -282,6 +308,8 @@ export class AuthService {
       .single();
 
     if (existingUser) {
+      this.assertAccountActive(existingUser as { status?: string | null });
+
       await this.supabase.client
         .from('users')
         .update({
@@ -340,6 +368,10 @@ export class AuthService {
     });
 
     if (error) throw new UnauthorizedException(error.message);
+
+    if (data.user?.id) {
+      await this.assertActiveByUserId(data.user.id);
+    }
 
     return {
       access_token: data.session!.access_token,

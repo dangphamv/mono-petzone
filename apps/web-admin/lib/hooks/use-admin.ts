@@ -309,6 +309,22 @@ export function useSuspendUser() {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] })
       qc.invalidateQueries({ queryKey: ['admin', 'user'] })
     },
+  })
+}
+
+export function useReactivateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      api(`/admin/users/${id}/reactivate`, {
+        method: 'PATCH',
+        body: JSON.stringify({ note }),
+      }),
+    onSuccess: () => {
+      toast.success('User reactivated')
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'user'] })
+    },
     onError: (err: Error) => {
       toast.error(`Error: ${err.message}`)
     },

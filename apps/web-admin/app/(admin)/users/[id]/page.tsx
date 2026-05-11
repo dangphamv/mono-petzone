@@ -1,8 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, PawPrint, MapPin, ClipboardList } from 'lucide-react'
+import { ArrowLeft, PawPrint, MapPin, ClipboardList, Ban } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
@@ -18,8 +17,7 @@ import {
   Avatar, AvatarImage, AvatarFallback,
   Separator,
 } from '@petzone/ui'
-import { api } from '@/lib/api'
-import { useSuspendUser, useOwnerPets } from '@/lib/hooks/use-admin'
+import { useSuspendUser, useOwnerPets, useUserDetail } from '@/lib/hooks/use-admin'
 import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
 
 const roleVariant = (r: string) =>
@@ -42,12 +40,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { t } = useI18n()
   const { id } = use(params)
   const router = useRouter()
-  const { data: user, isLoading } = useQuery<Record<string, unknown>>({
-    queryKey: ['admin', 'user', id],
-    queryFn: () => api(`/admin/users?page=1&limit=100`).then((res: any) =>
-      res.data?.find((u: any) => u.id === id) || null
-    ),
-  })
+  const { data: user, isLoading } = useUserDetail(id)
   const suspend = useSuspendUser()
   const isOwner = (user?.role as string) === 'owner'
   const { data: petsResp } = useOwnerPets(isOwner ? id : undefined)
@@ -120,6 +113,42 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           <Button variant="destructive" onClick={() => setShowModal(true)}>{t('users.suspend')}</Button>
         )}
       </div>
+
+      {(user.status === 'suspended' || user.status === 'banned') && (() => {
+        const s = user.suspension as { reason: string | null; is_permanent: boolean; suspended_at: string } | null
+        return (
+          <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-destructive/10 p-2 text-destructive">
+                <Ban size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-heading font-semibold text-destructive">{t('users.suspension_info')}</h3>
+                  <Badge variant="destructive">
+                    {t((STATUS_KEY[user.status as string] || 'status.suspended') as any)}
+                  </Badge>
+                  {s?.is_permanent && (
+                    <Badge variant="destructive">{t('users.permanent_ban')}</Badge>
+                  )}
+                </div>
+                <dl className="mt-3 space-y-2 text-sm">
+                  <div className="flex gap-2">
+                    <dt className="w-32 shrink-0 text-muted-foreground">{t('users.suspension_reason')}</dt>
+                    <dd className="font-medium">{s?.reason || t('users.suspension_no_reason')}</dd>
+                  </div>
+                  {s?.suspended_at && (
+                    <div className="flex gap-2">
+                      <dt className="w-32 shrink-0 text-muted-foreground">{t('users.suspension_date')}</dt>
+                      <dd>{formatDate(s.suspended_at)}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

@@ -8,6 +8,9 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type {
   VerifyProviderInput,
+  AdminUpdateProviderInput,
+  AdminCreatePetInput,
+  AdminUpdatePetInput,
   RequestInfoInput,
   ResolveDisputeInput,
   SuspendUserInput,
@@ -18,7 +21,7 @@ import type {
 } from '@petzone/validators';
 import { SupabaseService } from '../supabase/supabase.service';
 import { OrdersService } from '../orders/orders.service';
-import { PROVIDER_COLUMNS, ORDER_LIST_COLUMNS, DISPUTE_COLUMNS, USER_COLUMNS, REVIEW_COLUMNS, PET_COLUMNS, ROOM_COLUMNS, ADDON_COLUMNS } from '../../common/constants/columns';
+import { PROVIDER_COLUMNS, ORDER_COLUMNS, ORDER_LIST_COLUMNS, DISPUTE_COLUMNS, USER_COLUMNS, REVIEW_COLUMNS, PET_COLUMNS, ROOM_COLUMNS, ADDON_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
 
 @Injectable()
@@ -63,7 +66,10 @@ export class AdminService {
       .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, email, full_name, avatar_url)`, { count: 'exact' })
       .order('created_at', { ascending: true });
 
-    if (status) query = query.eq('verification_status', status);
+    if (status) {
+      const values = status.split(',').map((s) => s.trim()).filter(Boolean);
+      query = values.length > 1 ? query.in('verification_status', values) : query.eq('verification_status', values[0] ?? status);
+    }
     if (search) query = query.ilike('business_name', `%${search}%`);
 
     const { data, error, count } = await query.range(from, from + limit - 1);
@@ -163,6 +169,27 @@ export class AdminService {
     return { ...data, verification_history: history || [] };
   }
 
+  async updateProvider(adminId: string, id: string, body: AdminUpdateProviderInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .update({ ...body, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(PROVIDER_COLUMNS)
+      .single();
+    if (error || !data) {
+      if (error?.code === 'PGRST116') throw new NotFoundException('Provider not found');
+      throw new BadRequestException(error?.message || 'Failed to update provider');
+    }
+
+    await this.logAction(adminId, 'update_provider', 'provider', id, body as Record<string, unknown>);
+
+    return data;
+  }
+
   async verifyProvider(userId: string, id: string, body: VerifyProviderInput) {
     const { data, error } = await this.supabase.client
       .from('providers')
@@ -201,18 +228,83 @@ export class AdminService {
     return data;
   }
 
-  async getOrders(params: PaginationParams) {
-    const { page = 1, limit = 20 } = params;
+  async getOrders(params: PaginationParams & { search?: string; status?: string }) {
+    const { page = 1, limit = 20, search, status } = params;
     const from = (page - 1) * limit;
 
-    const { data, error, count } = await this.supabase.client
+    let providerIds: string[] = [];
+    let ownerIds: string[] = [];
+
+    if (search) {
+      const escaped = search.replace(/[,()]/g, ' ').trim();
+      if (escaped) {
+        const [providersRes, ownersRes] = await Promise.all([
+          this.supabase.client.from('providers').select('id').ilike('business_name', `%${escaped}%`),
+          this.supabase.client.from('users').select('id').or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%`),
+        ]);
+        providerIds = (providersRes.data ?? []).map((p) => p.id as string);
+        ownerIds = (ownersRes.data ?? []).map((u) => u.id as string);
+      }
+    }
+
+    let query = this.supabase.client
       .from('orders')
       .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, from + limit - 1);
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      const values = status.split(',').map((s) => s.trim()).filter(Boolean);
+      query = values.length > 1 ? query.in('status', values) : query.eq('status', values[0] ?? status);
+    }
+
+    if (search) {
+      const escaped = search.replace(/[,()]/g, ' ').trim();
+      if (escaped) {
+        const orFilters: string[] = [
+          `order_number.ilike.%${escaped}%`,
+          `special_notes.ilike.%${escaped}%`,
+          `cancellation_reason.ilike.%${escaped}%`,
+        ];
+        if (providerIds.length) orFilters.push(`provider_id.in.(${providerIds.join(',')})`);
+        if (ownerIds.length) orFilters.push(`owner_id.in.(${ownerIds.join(',')})`);
+        query = query.or(orFilters.join(','));
+      }
+    }
+
+    const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
     return paginate(data ?? [], count ?? 0, { page, limit });
+  }
+
+  async getOrderDetail(id: string) {
+    const { data: order, error } = await this.supabase.client
+      .from('orders')
+      .select(`${ORDER_COLUMNS}, providers(id, business_name, address, phone), room_types(id, name, capacity, price_per_night), users!orders_owner_id_fkey(id, email, full_name, phone, avatar_url)`)
+      .eq('id', id)
+      .single();
+    if (error || !order) {
+      if (error?.code === 'PGRST116') throw new NotFoundException('Order not found');
+      throw new BadRequestException(error?.message || 'Failed to load order');
+    }
+
+    const petIds = Array.isArray(order.pet_ids) ? (order.pet_ids as string[]) : [];
+    const addOnIds = Array.isArray(order.add_on_ids) ? (order.add_on_ids as string[]) : [];
+
+    const [petsRes, addOnsRes] = await Promise.all([
+      petIds.length
+        ? this.supabase.client.from('pets').select('id, name, species, breed, weight_kg, photos').in('id', petIds)
+        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      addOnIds.length
+        ? this.supabase.client.from('add_on_services').select('id, name, price, price_type').in('id', addOnIds)
+        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    ]);
+
+    return {
+      ...order,
+      pets: petsRes.data ?? [],
+      add_ons: addOnsRes.data ?? [],
+    };
   }
 
   async getDisputes(params: PaginationParams) {
@@ -293,6 +385,42 @@ export class AdminService {
     return paginate(data ?? [], count ?? 0, { page, limit });
   }
 
+  async getUserDetail(id: string) {
+    const { data: user, error } = await this.supabase.client
+      .from('users')
+      .select(USER_COLUMNS)
+      .eq('id', id)
+      .single();
+    if (error || !user) {
+      if (error?.code === 'PGRST116') throw new NotFoundException('User not found');
+      throw new BadRequestException(error?.message || 'Failed to load user');
+    }
+
+    let suspension: { reason: string | null; is_permanent: boolean; suspended_at: string; admin_id: string } | null = null;
+    if (user.status === 'suspended' || user.status === 'banned') {
+      const { data: log } = await this.supabase.client
+        .from('admin_action_log')
+        .select('admin_id, details, created_at')
+        .eq('target_type', 'user')
+        .eq('target_id', id)
+        .in('action_type', ['suspend_user', 'ban_user'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (log) {
+        const details = (log.details ?? {}) as Record<string, unknown>;
+        suspension = {
+          reason: (details.reason as string) || null,
+          is_permanent: Boolean(details.is_permanent),
+          suspended_at: log.created_at as string,
+          admin_id: log.admin_id as string,
+        };
+      }
+    }
+
+    return { ...user, suspension };
+  }
+
   async suspendUser(userId: string, id: string, body: SuspendUserInput) {
     const status = body.is_permanent ? 'banned' : 'suspended';
 
@@ -346,6 +474,44 @@ export class AdminService {
     return data;
   }
 
+  async createPet(_adminId: string, body: AdminCreatePetInput) {
+    const { data: owner, error: ownerErr } = await this.supabase.client
+      .from('users')
+      .select('id, role')
+      .eq('id', body.owner_id)
+      .maybeSingle();
+    if (ownerErr) throw new BadRequestException(ownerErr.message);
+    if (!owner) throw new NotFoundException('Owner not found');
+
+    const { data, error } = await this.supabase.client
+      .from('pets')
+      .insert(body)
+      .select(PET_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    return data;
+  }
+
+  async updatePet(_adminId: string, id: string, body: AdminUpdatePetInput) {
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('pets')
+      .update({ ...body, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(PET_COLUMNS)
+      .single();
+    if (error || !data) {
+      if (error?.code === 'PGRST116') throw new NotFoundException('Pet not found');
+      throw new BadRequestException(error?.message || 'Failed to update pet');
+    }
+
+    return data;
+  }
+
   async getFlaggedReviews(params: PaginationParams) {
     const { page = 1, limit = 20 } = params;
     const from = (page - 1) * limit;
@@ -388,36 +554,57 @@ export class AdminService {
     return data;
   }
 
-  async getAnalytics() {
-    const cacheKey = 'admin:analytics';
+  async getAnalytics(params: { month?: string } = {}) {
+    const range = params.month ? this.monthToRange(params.month) : null;
+    const cacheKey = `admin:analytics:${range ? params.month : 'lifetime'}`;
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const { data: ordersByStatus, error: obsErr } = await this.supabase.client
-      .rpc('get_orders_by_status_count');
+    const applyRange = <Q extends { gte: (...a: any[]) => Q; lt: (...a: any[]) => Q }>(q: Q, column: string) =>
+      range ? q.gte(column, range.start).lt(column, range.end) : q;
 
-    let statusBreakdown = ordersByStatus;
-    if (obsErr) {
-      const { data: orders } = await this.supabase.client
-        .from('orders')
-        .select('status');
-      const counts: Record<string, number> = {};
-      (orders || []).forEach((o: { status: string }) => {
-        counts[o.status] = (counts[o.status] || 0) + 1;
-      });
-      statusBreakdown = Object.entries(counts).map(([status, count]) => ({ status, count }));
-    }
+    let ordersQ = this.supabase.client.from('orders').select('status');
+    ordersQ = applyRange(ordersQ as any, 'created_at') as typeof ordersQ;
+    const { data: ordersForStatus } = await ordersQ;
+    const statusCounts: Record<string, number> = {};
+    (ordersForStatus || []).forEach((o: { status: string }) => {
+      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+    });
+    const statusBreakdown = Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
 
-    const [revenueResult, topProvidersResult] = await Promise.all([
-      this.supabase.client
-        .from('orders')
-        .select('total_price')
-        .eq('status', 'completed'),
+    let revenueQ = this.supabase.client.from('orders').select('total_price').eq('status', 'completed');
+    revenueQ = applyRange(revenueQ as any, range ? 'completed_at' : 'created_at') as typeof revenueQ;
+
+    let invoicesQ = this.supabase.client
+      .from('orders')
+      .select('id, order_number, total_price, status, created_at, providers(id, business_name), users!orders_owner_id_fkey(full_name, email)')
+      .not('total_price', 'is', null)
+      .order('total_price', { ascending: false })
+      .limit(10);
+    invoicesQ = applyRange(invoicesQ as any, 'created_at') as typeof invoicesQ;
+
+    let sellingQ = this.supabase.client
+      .from('orders')
+      .select('provider_id, total_price')
+      .eq('status', 'completed');
+    sellingQ = applyRange(sellingQ as any, range ? 'completed_at' : 'created_at') as typeof sellingQ;
+
+    const [revenueResult, invoicesResult, sellingResult, topProvidersResult, reviewsResult] = await Promise.all([
+      revenueQ,
+      invoicesQ,
+      sellingQ,
       this.supabase.client
         .from('providers')
         .select('id, business_name, rating_average, rating_count')
         .order('rating_average', { ascending: false })
         .limit(10),
+      range
+        ? this.supabase.client
+            .from('reviews')
+            .select('provider_id, rating_overall')
+            .gte('created_at', range.start)
+            .lt('created_at', range.end)
+        : Promise.resolve({ data: [] as Array<{ provider_id: string; rating_overall: number }>, error: null }),
     ]);
 
     const totalRevenue = (revenueResult.data || []).reduce(
@@ -425,14 +612,110 @@ export class AdminService {
       0,
     );
 
+    const sellingMap: Record<string, number> = {};
+    (sellingResult.data || []).forEach((o: { provider_id: string; total_price: number | string | null }) => {
+      if (!o.provider_id) return;
+      sellingMap[o.provider_id] = (sellingMap[o.provider_id] || 0) + (Number(o.total_price) || 0);
+    });
+    const sellingTopIds = Object.entries(sellingMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10);
+
+    let topSellingProviders: Array<{ id: string; business_name: string; revenue: number; order_count: number }> = [];
+    if (sellingTopIds.length) {
+      const ids = sellingTopIds.map(([id]) => id);
+      const { data: providers } = await this.supabase.client
+        .from('providers')
+        .select('id, business_name')
+        .in('id', ids);
+      const nameMap = new Map((providers || []).map((p: any) => [p.id, p.business_name]));
+      const orderCount: Record<string, number> = {};
+      (sellingResult.data || []).forEach((o: { provider_id: string }) => {
+        if (o.provider_id) orderCount[o.provider_id] = (orderCount[o.provider_id] || 0) + 1;
+      });
+      topSellingProviders = sellingTopIds.map(([id, revenue]) => ({
+        id,
+        business_name: (nameMap.get(id) as string) || '—',
+        revenue,
+        order_count: orderCount[id] || 0,
+      }));
+    }
+
+    let topReviewedProviders: Array<{ id: string; business_name: string; rating_average: number; rating_count: number }> = [];
+    if (range) {
+      const aggMap: Record<string, { sum: number; count: number }> = {};
+      ((reviewsResult.data as Array<{ provider_id: string; rating_overall: number }>) || []).forEach((r) => {
+        if (!r.provider_id) return;
+        const a = aggMap[r.provider_id] || { sum: 0, count: 0 };
+        a.sum += Number(r.rating_overall) || 0;
+        a.count += 1;
+        aggMap[r.provider_id] = a;
+      });
+      const reviewedTop = Object.entries(aggMap)
+        .sort(([, a], [, b]) => b.count - a.count || b.sum / b.count - a.sum / a.count)
+        .slice(0, 10);
+      if (reviewedTop.length) {
+        const ids = reviewedTop.map(([id]) => id);
+        const { data: providers } = await this.supabase.client
+          .from('providers')
+          .select('id, business_name')
+          .in('id', ids);
+        const nameMap = new Map((providers || []).map((p: any) => [p.id, p.business_name]));
+        topReviewedProviders = reviewedTop.map(([id, agg]) => ({
+          id,
+          business_name: (nameMap.get(id) as string) || '—',
+          rating_average: agg.count ? agg.sum / agg.count : 0,
+          rating_count: agg.count,
+        }));
+      }
+    } else {
+      const { data: providers } = await this.supabase.client
+        .from('providers')
+        .select('id, business_name, rating_average, rating_count')
+        .gt('rating_count', 0)
+        .order('rating_count', { ascending: false })
+        .limit(10);
+      topReviewedProviders = (providers || []).map((p: any) => ({
+        id: p.id,
+        business_name: p.business_name,
+        rating_average: Number(p.rating_average) || 0,
+        rating_count: Number(p.rating_count) || 0,
+      }));
+    }
+
     const result = {
-      orders_by_status: statusBreakdown || [],
+      period: range ? { month: params.month } : { month: null },
+      orders_by_status: statusBreakdown,
       total_revenue: totalRevenue,
       top_providers: topProvidersResult.data || [],
+      top_invoices: (invoicesResult.data || []).map((o: any) => ({
+        id: o.id,
+        order_number: o.order_number,
+        total_price: Number(o.total_price) || 0,
+        status: o.status,
+        created_at: o.created_at,
+        provider_name: Array.isArray(o.providers) ? o.providers[0]?.business_name : o.providers?.business_name,
+        owner_name: Array.isArray(o.users)
+          ? (o.users[0]?.full_name || o.users[0]?.email)
+          : (o.users?.full_name || o.users?.email),
+      })),
+      top_selling_providers: topSellingProviders,
+      top_reviewed_providers: topReviewedProviders,
     };
 
     await this.cache.set(cacheKey, result, 300_000);
     return result;
+  }
+
+  private monthToRange(month: string): { start: string; end: string } {
+    const match = /^(\d{4})-(\d{2})$/.exec(month);
+    if (!match) throw new BadRequestException('month must be YYYY-MM');
+    const year = Number(match[1]);
+    const mon = Number(match[2]);
+    if (mon < 1 || mon > 12) throw new BadRequestException('Invalid month');
+    const start = new Date(Date.UTC(year, mon - 1, 1)).toISOString();
+    const end = new Date(Date.UTC(mon === 12 ? year + 1 : year, mon === 12 ? 0 : mon, 1)).toISOString();
+    return { start, end };
   }
 
   private readonly CONFIG_DEFAULTS = {

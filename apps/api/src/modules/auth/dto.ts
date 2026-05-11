@@ -38,3 +38,11 @@ export class RefreshTokenDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...', description: 'Refresh token' })
   refresh_token: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'user@example.com', description: 'Account email', format: 'email' })
+  email: string;
+
+  @ApiPropertyOptional({ example: 'https://admin.petzone.vn/reset-password', description: 'URL the recovery link redirects to' })
+  redirect_to?: string;
+}

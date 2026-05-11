@@ -18,10 +18,38 @@ interface DashboardData {
   open_disputes: number
 }
 
+export interface TopInvoice {
+  id: string
+  order_number: string
+  total_price: number
+  status: string
+  created_at: string
+  provider_name?: string | null
+  owner_name?: string | null
+}
+
+export interface TopSellingProvider {
+  id: string
+  business_name: string
+  revenue: number
+  order_count: number
+}
+
+export interface TopReviewedProvider {
+  id: string
+  business_name: string
+  rating_average: number
+  rating_count: number
+}
+
 interface AnalyticsData {
+  period: { month: string | null }
   orders_by_status: { status: string; count: number }[]
   total_revenue: number
   top_providers: { id: string; business_name: string; rating_average: number; rating_count: number }[]
+  top_invoices: TopInvoice[]
+  top_selling_providers: TopSellingProvider[]
+  top_reviewed_providers: TopReviewedProvider[]
 }
 
 interface ConfigData {
@@ -90,10 +118,47 @@ export function useVerifyProvider() {
   })
 }
 
+export interface UpdateProviderBody {
+  business_name?: string
+  description?: string
+  license_number?: string
+  address?: string
+  phone?: string
+  accepted_species?: ('dog' | 'cat' | 'other')[]
+  weight_limit_min_kg?: number | null
+  weight_limit_max_kg?: number | null
+  cancellation_policy?: 'flexible' | 'moderate' | 'strict'
+  is_active?: boolean
+}
+
+export function useUpdateProvider() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & UpdateProviderBody) =>
+      api(`/admin/providers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Provider updated')
+      qc.invalidateQueries({ queryKey: ['admin', 'providers'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'provider'] })
+    },
+    onError: (err: Error) => {
+      toast.error(`Error: ${err.message}`)
+    },
+  })
+}
+
 export function useOrders(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
     queryKey: ['admin', 'orders', params],
     queryFn: () => api(buildQuery('/admin/orders', params)),
+  })
+}
+
+export function useOrderDetail(id: string) {
+  return useQuery<Record<string, unknown>>({
+    queryKey: ['admin', 'order', id],
+    queryFn: async () => (await api<{ data: Record<string, unknown> }>(`/admin/orders/${id}`)).data,
+    enabled: !!id,
   })
 }
 
@@ -218,6 +283,14 @@ export function useUsers(params: TableQueryParams = {}) {
   })
 }
 
+export function useUserDetail(id: string) {
+  return useQuery<Record<string, unknown>>({
+    queryKey: ['admin', 'user', id],
+    queryFn: async () => (await api<{ data: Record<string, unknown> }>(`/admin/users/${id}`)).data,
+    enabled: !!id,
+  })
+}
+
 export function useSuspendUser() {
   const qc = useQueryClient()
   return useMutation({
@@ -234,6 +307,7 @@ export function useSuspendUser() {
     onSuccess: () => {
       toast.success('User suspended successfully')
       qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'user'] })
     },
     onError: (err: Error) => {
       toast.error(`Error: ${err.message}`)
@@ -245,6 +319,51 @@ export function usePets(params: TableQueryParams = {}) {
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
     queryKey: ['admin', 'pets', params],
     queryFn: () => api(buildQuery('/admin/pets', params)),
+  })
+}
+
+export interface CreatePetBody {
+  owner_id: string
+  name: string
+  species: 'dog' | 'cat' | 'other'
+  gender: 'male' | 'female' | 'unknown'
+  breed?: string
+  date_of_birth?: string
+  weight_kg?: number
+  color?: string
+  photos?: string[]
+  is_neutered?: 'yes' | 'no' | 'unknown'
+  temperament?: 'friendly' | 'shy' | 'aggressive' | 'normal'
+  sociable_with_others?: 'yes' | 'no' | 'depends'
+  special_needs_notes?: string
+}
+
+export type UpdatePetBody = Partial<Omit<CreatePetBody, 'owner_id'>> & { is_active?: boolean }
+
+export function useCreatePet() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreatePetBody) =>
+      api<{ data: Record<string, unknown> }>('/admin/pets', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Pet created')
+      qc.invalidateQueries({ queryKey: ['admin', 'pets'] })
+    },
+    onError: (err: Error) => toast.error(`Error: ${err.message}`),
+  })
+}
+
+export function useUpdatePet() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & UpdatePetBody) =>
+      api(`/admin/pets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Pet updated')
+      qc.invalidateQueries({ queryKey: ['admin', 'pets'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'pet'] })
+    },
+    onError: (err: Error) => toast.error(`Error: ${err.message}`),
   })
 }
 
@@ -320,10 +439,14 @@ export function useModerateReview() {
   })
 }
 
-export function useAnalytics() {
+export function useAnalytics(params: { month?: string } = {}) {
+  const { month } = params
   return useQuery<AnalyticsData>({
-    queryKey: ['admin', 'analytics'],
-    queryFn: async () => (await api<{ data: AnalyticsData }>('/admin/analytics')).data,
+    queryKey: ['admin', 'analytics', month ?? 'lifetime'],
+    queryFn: async () => {
+      const path = month ? `/admin/analytics?month=${encodeURIComponent(month)}` : '/admin/analytics'
+      return (await api<{ data: AnalyticsData }>(path)).data
+    },
     staleTime: 300_000,
   })
 }

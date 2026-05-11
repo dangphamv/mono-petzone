@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { AlertCircle, PawPrint, Globe } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertCircle, PawPrint, Globe, CheckCircle2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n'
 import {
@@ -9,8 +9,10 @@ import {
   Card,
   CardContent,
   CardFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Label,
 } from '@petzone/ui'
-import { useLogin } from '@/lib/hooks/use-auth'
+import { useLogin, useForgotPassword } from '@/lib/hooks/use-auth'
 
 export default function AdminLoginPage() {
   const { t, locale, setLocale } = useI18n()
@@ -18,9 +20,25 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const login = useLogin()
 
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const forgot = useForgotPassword()
+
+  useEffect(() => {
+    if (forgotOpen) setForgotEmail(email)
+    else forgot.reset()
+  }, [forgotOpen])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     login.mutate({ email, password })
+  }
+
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!forgotEmail) return
+    const redirect = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined
+    forgot.mutate({ email: forgotEmail, redirect_to: redirect })
   }
 
   const toggleLocale = () => {
@@ -88,7 +106,16 @@ export default function AdminLoginPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">{t('login.password')}</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-300">{t('login.password')}</label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {t('login.forgot_password')}
+                  </button>
+                </div>
                 <input
                   type="password"
                   placeholder="••••••••"
@@ -111,6 +138,59 @@ export default function AdminLoginPage() {
           PetZone &copy; 2026. {t('common.all_rights')}
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('login.forgot_title')}</DialogTitle>
+            <DialogDescription>{t('login.forgot_desc')}</DialogDescription>
+          </DialogHeader>
+
+          {forgot.isSuccess ? (
+            <div className="flex items-start gap-3 rounded-lg border border-success/20 bg-success/5 p-4 text-sm">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-success mt-0.5" />
+              <p>{t('login.forgot_sent')}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              {forgot.isError && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{(forgot.error as Error)?.message}</span>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="forgot-email">{t('login.email')}</Label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="admin@petzone.vn"
+                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
+                  {t('login.forgot_back')}
+                </Button>
+                <Button type="submit" disabled={forgot.isPending || !forgotEmail}>
+                  {forgot.isPending ? t('login.forgot_sending') : t('login.forgot_submit')}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {forgot.isSuccess && (
+            <DialogFooter>
+              <Button type="button" onClick={() => setForgotOpen(false)}>
+                {t('login.forgot_back')}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -134,11 +134,9 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>{t('providers.owner_info')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-3 text-sm">
+          <CardContent className="pt-6">
+            <h3 className="font-heading text-base font-semibold">{t('providers.owner_info')}</h3>
+            <dl className="mt-3 space-y-3 text-sm">
               <InfoRow label={t('providers.name')} value={ownerInfo?.full_name as string} />
               <InfoRow label={t('providers.email')} value={ownerInfo?.email as string} />
             </dl>

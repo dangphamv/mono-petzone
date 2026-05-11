@@ -15,6 +15,7 @@ import type {
   GoogleAuthInput,
   RefreshTokenInput,
   SelectRoleInput,
+  ForgotPasswordInput,
 } from '@petzone/validators';
 
 @Injectable()
@@ -318,6 +319,19 @@ export class AuthService {
       user: newUser,
       is_new_user: true,
     };
+  }
+
+  async forgotPassword(body: ForgotPasswordInput) {
+    const redirectTo = body.redirect_to || this.config.get<string>('PASSWORD_RESET_REDIRECT_URL');
+    const { error } = await this.supabase
+      .createAuthClient()
+      .auth.resetPasswordForEmail(body.email, redirectTo ? { redirectTo } : undefined);
+
+    if (error && !/not\s*found|user.*not|no.*user/i.test(error.message)) {
+      throw new BadRequestException(error.message);
+    }
+
+    return { sent: true };
   }
 
   async refresh(body: RefreshTokenInput) {

@@ -3,6 +3,9 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { PAGINATION } from '@petzone/shared';
 import {
   verifyProviderSchema,
+  adminUpdateProviderSchema,
+  adminCreatePetSchema,
+  adminUpdatePetSchema,
   requestInfoSchema,
   resolveDisputeSchema,
   suspendUserSchema,
@@ -12,7 +15,7 @@ import {
   adminCreateOrderSchema,
   cancelOrderSchema,
 } from '@petzone/validators';
-import type { CancelOrderInput } from '@petzone/validators';
+import type { AdminUpdateProviderInput, AdminCreatePetInput, AdminUpdatePetInput, CancelOrderInput } from '@petzone/validators';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -118,6 +121,21 @@ export class AdminController {
     return this.adminService.verifyProvider(user.id, id, body);
   }
 
+  @Patch('providers/:id')
+  @ApiOperation({ summary: 'Update provider basic info (admin)' })
+  @ApiResponse({ status: 200, description: 'Provider updated', schema: { example: ok(EXAMPLE_PROVIDER, 'Provider updated') } })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Provider not found', schema: { example: ERROR_404 } })
+  updateProvider(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(adminUpdateProviderSchema)) body: AdminUpdateProviderInput,
+  ) {
+    return this.adminService.updateProvider(user.id, id, body);
+  }
+
   @Post('providers/:id/request-info')
   @ApiOperation({ summary: 'Request additional info from provider' })
   @ApiResponse({ status: 201, description: 'Info request sent to provider', schema: { example: ok(EXAMPLE_REQUEST_INFO_RESULT, 'Info request sent to provider') } })
@@ -134,10 +152,17 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Orders list returned', schema: { example: okPaginated([EXAMPLE_ORDER_LIST_ITEM], 'Orders list returned', 2017) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
-  getOrders(@Query('page') page?: string, @Query('limit') limit?: string) {
+  getOrders(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
     return this.adminService.getOrders({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
+      search,
+      status,
     });
   }
 
@@ -170,6 +195,16 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
   exportOrders() {
     return this.adminService.exportOrders();
+  }
+
+  @Get('orders/:id')
+  @ApiOperation({ summary: 'Get order detail with room, pets, and add-ons' })
+  @ApiResponse({ status: 200, description: 'Order detail returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
+  getOrderDetail(@Param('id') id: string) {
+    return this.adminService.getOrderDetail(id);
   }
 
   @Post('orders/:id/message')
@@ -225,6 +260,16 @@ export class AdminController {
     });
   }
 
+  @Get('users/:id')
+  @ApiOperation({ summary: 'Get user detail with suspension info' })
+  @ApiResponse({ status: 200, description: 'User detail returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'User not found', schema: { example: ERROR_404 } })
+  getUserDetail(@Param('id') id: string) {
+    return this.adminService.getUserDetail(id);
+  }
+
   @Patch('users/:id/suspend')
   @ApiOperation({ summary: 'Suspend or unsuspend a user' })
   @ApiResponse({ status: 200, description: 'User suspension updated', schema: { example: ok(EXAMPLE_SUSPEND_USER_RESULT, 'User suspension updated') } })
@@ -267,6 +312,35 @@ export class AdminController {
     return this.adminService.getPetDetail(id);
   }
 
+  @Post('pets')
+  @ApiOperation({ summary: 'Create a pet on behalf of an owner' })
+  @ApiResponse({ status: 201, description: 'Pet created' })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Owner not found', schema: { example: ERROR_404 } })
+  createPet(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(adminCreatePetSchema)) body: AdminCreatePetInput,
+  ) {
+    return this.adminService.createPet(user.id, body);
+  }
+
+  @Patch('pets/:id')
+  @ApiOperation({ summary: 'Update a pet (admin)' })
+  @ApiResponse({ status: 200, description: 'Pet updated' })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Pet not found', schema: { example: ERROR_404 } })
+  updatePet(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(adminUpdatePetSchema)) body: AdminUpdatePetInput,
+  ) {
+    return this.adminService.updatePet(user.id, id, body);
+  }
+
   @Get('reviews/flagged')
   @ApiOperation({ summary: 'List flagged reviews' })
   @ApiResponse({ status: 200, description: 'Flagged reviews returned', schema: { example: okPaginated([EXAMPLE_REVIEW], 'Flagged reviews returned', 7) } })
@@ -291,12 +365,12 @@ export class AdminController {
   }
 
   @Get('analytics')
-  @ApiOperation({ summary: 'Get platform analytics' })
+  @ApiOperation({ summary: 'Get platform analytics (lifetime or filtered by month YYYY-MM)' })
   @ApiResponse({ status: 200, description: 'Analytics data returned', schema: { example: ok(EXAMPLE_ADMIN_ANALYTICS) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
-  getAnalytics() {
-    return this.adminService.getAnalytics();
+  getAnalytics(@Query('month') month?: string) {
+    return this.adminService.getAnalytics({ month });
   }
 
   @Get('config')

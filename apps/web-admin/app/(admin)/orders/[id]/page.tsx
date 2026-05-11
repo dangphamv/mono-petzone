@@ -1,8 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronRight, CreditCard, PawPrint, Camera, Receipt } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, CreditCard, PawPrint, Camera, Receipt, BedDouble } from 'lucide-react'
 import Link from 'next/link'
 import {
   Badge,
@@ -14,8 +13,8 @@ import {
   Skeleton,
   Separator,
 } from '@petzone/ui'
-import { api } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
+import { useOrderDetail } from '@/lib/hooks/use-admin'
 import { MOCK_ORDER_EXTENDED } from '@/lib/mock-data'
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,12 +37,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const { data: order, isLoading } = useQuery<Record<string, unknown>>({
-    queryKey: ['admin', 'order', id],
-    queryFn: () => api(`/admin/orders?page=1&limit=100`).then((res: any) =>
-      res.data?.find((o: any) => o.id === id) || null
-    ),
-  })
+  const { data: order, isLoading } = useOrderDetail(id)
 
   // Collapsible sections state
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -94,6 +88,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     ? (Array.isArray(provider) ? provider[0]?.business_name : provider?.business_name) as string
     : MOCK_ORDER_EXTENDED.provider_name
 
+  const roomTypeRaw = order.room_types as Record<string, unknown> | Record<string, unknown>[] | null
+  const roomType = roomTypeRaw ? (Array.isArray(roomTypeRaw) ? roomTypeRaw[0] : roomTypeRaw) : null
+  const roomName = (roomType?.name as string) || ''
+  const pets = (order.pets as Array<Record<string, unknown>>) ?? []
+  const petNames = pets.map((p) => p.name as string).filter(Boolean)
+  const roomAndPets = roomName
+    ? petNames.length ? `${roomName} — ${petNames.join(', ')}` : roomName
+    : petNames.length ? petNames.join(', ') : t('orders.no_room')
+
+  const ownerInfoRaw = order.users as Record<string, unknown> | Record<string, unknown>[] | null
+  const ownerInfo = ownerInfoRaw ? (Array.isArray(ownerInfoRaw) ? ownerInfoRaw[0] : ownerInfoRaw) : null
+  const ownerName = (ownerInfo?.full_name as string) || (ownerInfo?.email as string) || MOCK_ORDER_EXTENDED.owner_name
+
   const ext = MOCK_ORDER_EXTENDED
 
   return (
@@ -121,8 +128,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              <InfoRow label={t('orders.owner_name')} value={ext.owner_name} />
+              <InfoRow label={t('orders.owner_name')} value={ownerName} />
               <InfoRow label={t('orders.provider_name')} value={providerName} />
+              <InfoRow
+                label={t('orders.room_and_pets')}
+                value={
+                  <span className="inline-flex items-center gap-1.5">
+                    <BedDouble size={14} className="text-muted-foreground" />
+                    <span className="font-medium">{roomAndPets}</span>
+                  </span>
+                }
+              />
               <InfoRow label={t('orders.check_in')} value={formatDate(order.check_in_date as string)} />
               <InfoRow label={t('orders.check_out')} value={formatDate(order.check_out_date as string)} />
               <InfoRow label={t('orders.num_nights')} value={String(order.num_nights ?? '-')} />
@@ -162,12 +178,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           open={openSections.pet}
           onToggle={() => toggleSection('pet')}
         >
-          <dl className="space-y-3 text-sm">
-            <InfoRow label="Tên" value={ext.pet_info.name} />
-            <InfoRow label="Loại" value={ext.pet_info.species} />
-            <InfoRow label="Giống" value={ext.pet_info.breed} />
-            <InfoRow label="Cân nặng" value={`${ext.pet_info.weight_kg} kg`} />
-          </dl>
+          {pets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('orders.no_pets')}</p>
+          ) : (
+            <div className="space-y-4">
+              {pets.map((p, i) => (
+                <div key={(p.id as string) || i}>
+                  {i > 0 && <Separator className="mb-4" />}
+                  <p className="mb-2 font-medium text-sm">{p.name as string}</p>
+                  <dl className="space-y-2 text-sm">
+                    <InfoRow label="Loại" value={(p.species as string) || '-'} />
+                    <InfoRow label="Giống" value={(p.breed as string) || '-'} />
+                    <InfoRow label="Cân nặng" value={p.weight_kg ? `${p.weight_kg} kg` : '-'} />
+                  </dl>
+                </div>
+              ))}
+            </div>
+          )}
         </CollapsibleCard>
 
         {/* Price Breakdown */}

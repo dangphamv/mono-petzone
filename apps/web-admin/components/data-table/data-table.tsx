@@ -87,7 +87,6 @@ export function DataTable<TData, TValue>({
       sorting,
       columnVisibility,
       columnFilters,
-      globalFilter: searchValue ?? '',
     },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
@@ -95,8 +94,8 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
+    manualFiltering: true,
     filterFns: { multiValue: multiValueFilter },
-    globalFilterFn: 'includesString',
   })
 
   const colCount = columns.length

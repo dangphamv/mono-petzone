@@ -67,7 +67,7 @@ export default function CreateOrderPage() {
     page: 1,
     limit: 10,
     search: debouncedProvider,
-    filters: { verification_status: ['approved'] },
+    filters: { status: ['approved'] },
   })
 
   // ── Dependent data ──

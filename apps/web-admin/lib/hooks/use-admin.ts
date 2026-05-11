@@ -118,6 +118,40 @@ export function useVerifyProvider() {
   })
 }
 
+export interface CreateProviderBody {
+  user_id?: string
+  new_owner?: {
+    full_name: string
+    email?: string
+    phone?: string
+  }
+  business_name: string
+  address: string
+  description?: string
+  license_number?: string
+  phone?: string
+  latitude?: number
+  longitude?: number
+  accepted_species?: ('dog' | 'cat' | 'other')[]
+  weight_limit_min_kg?: number
+  weight_limit_max_kg?: number
+  cancellation_policy?: 'flexible' | 'moderate' | 'strict'
+}
+
+export function useCreateProvider() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateProviderBody) =>
+      api<{ data: Record<string, unknown> }>('/admin/providers', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Provider created')
+      qc.invalidateQueries({ queryKey: ['admin', 'providers'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+    },
+    onError: (err: Error) => toast.error(`Error: ${err.message}`),
+  })
+}
+
 export interface UpdateProviderBody {
   business_name?: string
   description?: string

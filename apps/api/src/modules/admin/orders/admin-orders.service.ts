@@ -37,7 +37,7 @@ export class AdminOrdersService {
 
     let query = this.supabase.client
       .from('orders')
-      .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`, { count: 'exact' })
+      .select(`${ORDER_LIST_COLUMNS}, providers(id, display_id, business_name)`, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (status) {
@@ -68,7 +68,7 @@ export class AdminOrdersService {
   async getOrderDetail(id: string) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_COLUMNS}, providers(id, business_name, address, phone), room_types(id, name, capacity, price_per_night), users!orders_owner_id_fkey(id, email, full_name, phone, avatar_url)`)
+      .select(`${ORDER_COLUMNS}, providers(id, display_id, business_name, address, phone), room_types(id, name, capacity, price_per_night), users!orders_owner_id_fkey(id, display_id, email, full_name, phone, avatar_url)`)
       .eq('id', id)
       .single();
     if (error || !order) {
@@ -173,7 +173,7 @@ export class AdminOrdersService {
   async exportOrders() {
     const { data, error } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_LIST_COLUMNS}, providers(id, business_name)`)
+      .select(`${ORDER_LIST_COLUMNS}, providers(id, display_id, business_name)`)
       .order('created_at', { ascending: false })
       .limit(10000);
     if (error) throw new BadRequestException('Failed to export orders');

@@ -16,6 +16,7 @@ import {
 import { useI18n } from '@/lib/i18n'
 import { useOrderDetail } from '@/lib/hooks/use-admin'
 import { MOCK_ORDER_EXTENDED } from '@/lib/mock-data'
+import { displayId } from '@/lib/display-id'
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -84,9 +85,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const provider = order.providers as Record<string, unknown> | Record<string, unknown>[] | null
-  const providerName = provider
-    ? (Array.isArray(provider) ? provider[0]?.business_name : provider?.business_name) as string
-    : MOCK_ORDER_EXTENDED.provider_name
+  const providerObj = provider ? (Array.isArray(provider) ? provider[0] : provider) : null
+  const providerName = (providerObj?.business_name as string) || MOCK_ORDER_EXTENDED.provider_name
+  const providerDisplayId = providerObj ? displayId(providerObj, 'P') : null
 
   const roomTypeRaw = order.room_types as Record<string, unknown> | Record<string, unknown>[] | null
   const roomType = roomTypeRaw ? (Array.isArray(roomTypeRaw) ? roomTypeRaw[0] : roomTypeRaw) : null
@@ -100,6 +101,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const ownerInfoRaw = order.users as Record<string, unknown> | Record<string, unknown>[] | null
   const ownerInfo = ownerInfoRaw ? (Array.isArray(ownerInfoRaw) ? ownerInfoRaw[0] : ownerInfoRaw) : null
   const ownerName = (ownerInfo?.full_name as string) || (ownerInfo?.email as string) || MOCK_ORDER_EXTENDED.owner_name
+  const ownerDisplayId = ownerInfo ? displayId(ownerInfo, 'U') : null
 
   const ext = MOCK_ORDER_EXTENDED
 
@@ -128,8 +130,32 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              <InfoRow label={t('orders.owner_name')} value={ownerName} />
-              <InfoRow label={t('orders.provider_name')} value={providerName} />
+              <InfoRow
+                label={t('orders.owner_name')}
+                value={
+                  <span className="inline-flex items-center gap-2">
+                    <span>{ownerName}</span>
+                    {ownerDisplayId ? (
+                      <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {ownerDisplayId}
+                      </span>
+                    ) : null}
+                  </span>
+                }
+              />
+              <InfoRow
+                label={t('orders.provider_name')}
+                value={
+                  <span className="inline-flex items-center gap-2">
+                    <span>{providerName}</span>
+                    {providerDisplayId ? (
+                      <span className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {providerDisplayId}
+                      </span>
+                    ) : null}
+                  </span>
+                }
+              />
               <InfoRow
                 label={t('orders.room_and_pets')}
                 value={

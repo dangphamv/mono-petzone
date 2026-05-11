@@ -14,7 +14,7 @@ export class AdminPetsService {
 
     let query = this.supabase.client
       .from('pets')
-      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, email, full_name, avatar_url)`, { count: 'exact' })
+      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, display_id, email, full_name, avatar_url)`, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (ownerId) query = query.eq('owner_id', ownerId);
@@ -34,7 +34,7 @@ export class AdminPetsService {
   async getPetDetail(id: string) {
     const { data, error } = await this.supabase.client
       .from('pets')
-      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, email, full_name, avatar_url, phone)`)
+      .select(`${PET_COLUMNS}, users!pets_owner_id_fkey(id, display_id, email, full_name, avatar_url, phone)`)
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException('Pet not found');

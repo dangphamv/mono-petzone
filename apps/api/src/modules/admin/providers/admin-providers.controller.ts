@@ -4,9 +4,10 @@ import { PAGINATION } from '@petzone/shared';
 import {
   verifyProviderSchema,
   adminUpdateProviderSchema,
+  adminCreateProviderSchema,
   requestInfoSchema,
 } from '@petzone/validators';
-import type { AdminUpdateProviderInput } from '@petzone/validators';
+import type { AdminUpdateProviderInput, AdminCreateProviderInput } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
@@ -50,6 +51,20 @@ export class AdminProvidersController {
       status,
       search,
     });
+  }
+
+  @Post('providers')
+  @ApiOperation({ summary: 'Create a provider profile for a user (admin)' })
+  @ApiResponse({ status: 201, description: 'Provider created', schema: { example: ok(EXAMPLE_PROVIDER, 'Provider created') } })
+  @ApiResponse({ status: 400, description: 'Validation error or user already has provider profile', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Owner user not found', schema: { example: ERROR_404 } })
+  createProvider(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(adminCreateProviderSchema)) body: AdminCreateProviderInput,
+  ) {
+    return this.service.createProvider(user.id, body);
   }
 
   @Get('providers/:id/rooms')

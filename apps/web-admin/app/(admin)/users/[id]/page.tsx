@@ -19,6 +19,7 @@ import {
 } from '@petzone/ui'
 import { useSuspendUser, useReactivateUser, useOwnerPets, useUserDetail } from '@/lib/hooks/use-admin'
 import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
+import { displayId } from '@/lib/display-id'
 
 const roleVariant = (r: string) =>
   r === 'admin' ? 'muted' : r === 'provider' ? 'default' : 'info'
@@ -109,7 +110,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="font-heading text-2xl font-bold">{user.full_name as string}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-2xl font-bold">{user.full_name as string}</h1>
+              <span className="rounded-md border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                {displayId(user, 'U')}
+              </span>
+            </div>
             <div className="mt-1 flex gap-2">
               <Badge variant={roleVariant(user.role as string)}>
                 {t((ROLE_KEY[user.role as string] || 'role.owner') as any)}

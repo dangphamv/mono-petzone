@@ -17,6 +17,7 @@ import {
 } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
+import { displayId } from '@/lib/display-id'
 
 type Pet = Record<string, unknown>
 
@@ -171,6 +172,14 @@ export default function PetsPage() {
   }
 
   const columns = useMemo<ColumnDef<Pet, unknown>[]>(() => [
+    {
+      accessorKey: 'display_id',
+      header: 'ID',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">{displayId(row.original, 'T')}</span>
+      ),
+    },
     {
       accessorKey: 'name',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('pets.name')} />,

@@ -58,7 +58,7 @@ export class AdminDashboardService {
 
     let invoicesQ = this.supabase.client
       .from('orders')
-      .select('id, order_number, total_price, status, created_at, providers(id, business_name), users!orders_owner_id_fkey(full_name, email)')
+      .select('id, order_number, total_price, status, created_at, providers(id, display_id, business_name), users!orders_owner_id_fkey(display_id, full_name, email)')
       .not('total_price', 'is', null)
       .order('total_price', { ascending: false })
       .limit(10);

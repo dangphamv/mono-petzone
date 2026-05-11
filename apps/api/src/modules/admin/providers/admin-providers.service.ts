@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import type {
   VerifyProviderInput,
   AdminUpdateProviderInput,
+  AdminCreateProviderInput,
   RequestInfoInput,
 } from '@petzone/validators';
 import { SupabaseService } from '../../supabase/supabase.service';
@@ -22,7 +24,7 @@ export class AdminProvidersService {
 
     let query = this.supabase.client
       .from('providers')
-      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, email, full_name, avatar_url)`, { count: 'exact' })
+      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`, { count: 'exact' })
       .order('created_at', { ascending: true });
 
     if (status) {
@@ -62,7 +64,7 @@ export class AdminProvidersService {
   async getProviderDetail(id: string) {
     const { data, error } = await this.supabase.client
       .from('providers')
-      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, email, full_name, avatar_url)`)
+      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`)
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException('Provider not found');
@@ -75,6 +77,107 @@ export class AdminProvidersService {
       .order('created_at', { ascending: false });
 
     return { ...data, verification_history: history || [] };
+  }
+
+  async createProvider(adminId: string, body: AdminCreateProviderInput) {
+    let userId = body.user_id ?? '';
+
+    if (body.new_owner) {
+      userId = await this.createOwnerForProvider(body.new_owner);
+    } else {
+      const { data: owner, error: ownerErr } = await this.supabase.client
+        .from('users')
+        .select('id, role')
+        .eq('id', userId)
+        .maybeSingle();
+      if (ownerErr) throw new BadRequestException(ownerErr.message);
+      if (!owner) throw new NotFoundException('Owner user not found');
+
+      const { data: existing } = await this.supabase.client
+        .from('providers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (existing) throw new BadRequestException('This user already has a provider profile');
+
+      if (owner.role !== 'provider') {
+        await this.supabase.client.from('users').update({ role: 'provider' }).eq('id', userId);
+        await this.supabase.client.auth.admin.updateUserById(userId, {
+          app_metadata: { role: 'provider' },
+        });
+      }
+    }
+
+    const { new_owner: _newOwner, user_id: _userId, ...providerFields } = body;
+
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .insert({
+        ...providerFields,
+        user_id: userId,
+        verification_status: 'approved',
+        verified_at: new Date().toISOString(),
+        verified_by: adminId,
+      })
+      .select(PROVIDER_COLUMNS)
+      .single();
+    if (error || !data) throw new BadRequestException(error?.message || 'Failed to create provider');
+
+    return data;
+  }
+
+  private async createOwnerForProvider(
+    newOwner: NonNullable<AdminCreateProviderInput['new_owner']>,
+  ): Promise<string> {
+    const email = newOwner.email?.toLowerCase();
+    const phone = newOwner.phone;
+
+    if (email) {
+      const { data: existing } = await this.supabase.client
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      if (existing) throw new BadRequestException('A user with this email already exists');
+    }
+    if (phone) {
+      const { data: existing } = await this.supabase.client
+        .from('users')
+        .select('id')
+        .eq('phone', phone)
+        .maybeSingle();
+      if (existing) throw new BadRequestException('A user with this phone already exists');
+    }
+
+    const tempPassword = randomBytes(18).toString('base64url');
+    const authEmail = email ?? `provider-${randomBytes(6).toString('hex')}@petzone.internal`;
+
+    const { data: authData, error: authError } = await this.supabase.client.auth.admin.createUser({
+      email: authEmail,
+      password: tempPassword,
+      email_confirm: true,
+      phone: phone || undefined,
+      phone_confirm: phone ? true : undefined,
+      app_metadata: { role: 'provider' },
+    });
+    if (authError || !authData?.user) {
+      throw new BadRequestException(authError?.message || 'Failed to create auth user');
+    }
+
+    const { error: insertError } = await this.supabase.client.from('users').insert({
+      id: authData.user.id,
+      email: email ?? null,
+      phone: phone ?? null,
+      full_name: newOwner.full_name,
+      role: 'provider',
+    });
+    if (insertError) {
+      // Roll back the auth user so we don't orphan it.
+      await this.supabase.client.auth.admin.deleteUser(authData.user.id).catch(() => undefined);
+      throw new BadRequestException(insertError.message);
+    }
+
+    return authData.user.id;
   }
 
   async updateProvider(adminId: string, id: string, body: AdminUpdateProviderInput) {

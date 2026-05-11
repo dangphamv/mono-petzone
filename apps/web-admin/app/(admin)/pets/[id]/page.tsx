@@ -12,6 +12,7 @@ import {
 } from '@petzone/ui'
 import { usePetDetail } from '@/lib/hooks/use-admin'
 import { useI18n } from '@/lib/i18n'
+import { displayId } from '@/lib/display-id'
 
 const SPECIES_CLASS: Record<string, string> = {
   dog: 'bg-amber-50 text-amber-700',
@@ -93,7 +94,12 @@ export default function PetDetailPage({ params }: { params: Promise<{ id: string
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="font-heading text-2xl font-bold">{pet.name as string}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-bold">{pet.name as string}</h1>
+            <span className="rounded-md border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              {displayId(pet, 'T')}
+            </span>
+          </div>
           <div className="mt-1 flex gap-2">
             <Badge variant="outline" className={SPECIES_CLASS[species] || 'bg-slate-100 text-slate-700'}>
               {t(`pets.species.${species}` as any)}

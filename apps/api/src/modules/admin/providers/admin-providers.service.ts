@@ -31,7 +31,12 @@ export class AdminProvidersService {
       const values = status.split(',').map((s) => s.trim()).filter(Boolean);
       query = values.length > 1 ? query.in('verification_status', values) : query.eq('verification_status', values[0] ?? status);
     }
-    if (search) query = query.ilike('business_name', `%${search}%`);
+    if (search) {
+      const escaped = search.replace(/[,()]/g, ' ').trim();
+      if (escaped) {
+        query = query.or(`business_name.ilike.%${escaped}%,display_id.ilike.%${escaped}%,phone.ilike.%${escaped}%,license_number.ilike.%${escaped}%`);
+      }
+    }
 
     const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);

@@ -1,13 +1,13 @@
-import { Controller, Get, Patch, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
-import { resolveDisputeSchema } from '@petzone/validators';
+import { resolveDisputeSchema, adminCreateDisputeSchema } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
 import { AdminDisputesService } from './admin-disputes.service';
-import { ResolveDisputeDto } from '../dto';
+import { ResolveDisputeDto, AdminCreateDisputeDto } from '../dto';
 import {
   ok,
   okPaginated,
@@ -36,6 +36,17 @@ export class AdminDisputesController {
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
     });
+  }
+
+  @Post('disputes')
+  @ApiOperation({ summary: 'Create a dispute on behalf of an owner or provider' })
+  @ApiResponse({ status: 201, description: 'Dispute created', schema: { example: ok(EXAMPLE_DISPUTE, 'Dispute created') } })
+  @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Admin role required', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
+  createDispute(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(adminCreateDisputeSchema)) body: AdminCreateDisputeDto) {
+    return this.service.createDispute(user.id, body);
   }
 
   @Patch('disputes/:id/resolve')

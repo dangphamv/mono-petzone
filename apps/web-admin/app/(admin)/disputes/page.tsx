@@ -2,21 +2,28 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   Badge, Button, Input,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Textarea, Label,
+  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
-import { useDisputes, useResolveDispute } from '@/lib/hooks/use-admin'
+import { useDisputes, useResolveDispute, useCreateDispute } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
+import { CopyableId } from '@/components/copyable-id'
 
 type Dispute = Record<string, unknown>
 
-const STATUS_VARIANT: Record<string, 'warning' | 'success'> = { open: 'warning', resolved: 'success' }
+const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success' | 'muted'> = {
+  open: 'warning',
+  investigating: 'info',
+  resolved: 'success',
+  closed: 'muted',
+}
 const ROLE_CLASS: Record<string, string> = {
   owner: 'bg-violet-50 text-violet-700',
   provider: 'bg-cyan-50 text-cyan-700',
@@ -38,9 +45,16 @@ export default function DisputesPage() {
     filters: table.filters,
   })
   const resolve = useResolveDispute()
+  const createDispute = useCreateDispute()
   const [selected, setSelected] = useState<Dispute | null>(null)
   const [resolution, setResolution] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [form, setForm] = useState({
+    order_id: '',
+    opened_by_role: 'owner' as 'owner' | 'provider',
+    description: '',
+  })
 
   const handleResolve = () => {
     if (!selected || !resolution) return
@@ -51,18 +65,41 @@ export default function DisputesPage() {
   }
   const closeModal = () => { setSelected(null); setResolution(''); setRefundAmount('') }
 
+  const handleCreate = () => {
+    if (!form.order_id.trim() || !form.description.trim()) return
+    createDispute.mutate(
+      { order_id: form.order_id.trim(), opened_by_role: form.opened_by_role, description: form.description.trim() },
+      {
+        onSuccess: () => {
+          setCreateOpen(false)
+          setForm({ order_id: '', opened_by_role: 'owner', description: '' })
+        },
+      },
+    )
+  }
+  const closeCreate = () => {
+    setCreateOpen(false)
+    setForm({ order_id: '', opened_by_role: 'owner', description: '' })
+  }
+
   const columns = useMemo<ColumnDef<Dispute, unknown>[]>(() => [
     {
       accessorKey: 'id',
       header: t('disputes.id'),
       enableSorting: false,
-      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{(row.original.id as string).slice(0, 8)}...</span>,
+      cell: ({ row }) => {
+        const v = row.original.id as string
+        return <CopyableId value={v} displayValue={v ? `${v.slice(0, 8)}…` : undefined} />
+      },
     },
     {
       accessorKey: 'order_id',
       header: t('disputes.order'),
       enableSorting: false,
-      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{(row.original.order_id as string)?.slice(0, 8)}...</span>,
+      cell: ({ row }) => {
+        const v = row.original.order_id as string
+        return <CopyableId value={v} displayValue={v ? `${v.slice(0, 8)}…` : undefined} />
+      },
     },
     {
       accessorKey: 'opened_by_role',
@@ -119,17 +156,25 @@ export default function DisputesPage() {
 
   const statusOptions = useMemo(() => [
     { label: t('status.open'), value: 'open' },
+    { label: t('status.investigating'), value: 'investigating' },
     { label: t('status.resolved'), value: 'resolved' },
+    { label: t('status.closed'), value: 'closed' },
   ], [t])
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="stat-icon bg-red-50 text-red-600"><AlertTriangle size={20} /></div>
-        <div>
-          <h1 className="page-header">{t('disputes.title')}</h1>
-          <p className="page-description">{t('disputes.subtitle')}</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="stat-icon bg-red-50 text-red-600"><AlertTriangle size={20} /></div>
+          <div>
+            <h1 className="page-header">{t('disputes.title')}</h1>
+            <p className="page-description">{t('disputes.subtitle')}</p>
+          </div>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus size={16} />
+          {t('common.create')}
+        </Button>
       </div>
 
       <DataTable
@@ -157,6 +202,56 @@ export default function DisputesPage() {
           />
         }
       />
+
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) closeCreate() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('disputes.create_title')}</DialogTitle>
+            <DialogDescription>{t('disputes.create_desc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>{t('disputes.order')} *</Label>
+              <Input
+                value={form.order_id}
+                onChange={(e) => setForm((f) => ({ ...f, order_id: e.target.value }))}
+                placeholder="550e8400-e29b-41d4-a716-446655440000"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('disputes.opened_by')} *</Label>
+              <Select
+                value={form.opened_by_role}
+                onValueChange={(v) => setForm((f) => ({ ...f, opened_by_role: v as 'owner' | 'provider' }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">{t('role.owner')}</SelectItem>
+                  <SelectItem value="provider">{t('role.provider')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('common.description')} *</Label>
+              <Textarea
+                rows={4}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder={t('disputes.create_desc_placeholder')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCreate}>{t('common.cancel')}</Button>
+            <Button
+              onClick={handleCreate}
+              disabled={createDispute.isPending || !form.order_id.trim() || !form.description.trim()}
+            >
+              {createDispute.isPending ? t('common.processing') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) closeModal() }}>
         <DialogContent>

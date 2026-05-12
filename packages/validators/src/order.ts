@@ -59,6 +59,13 @@ export const checkOutOrderSchema = z.object({
   note: z.string().max(500).optional(),
 })
 
+export const checkInOrderSchema = z.object({
+  photos: z.array(z.string().url({ message: 'Each photo must be a valid URL' })).min(1).max(5),
+  note: z.string().max(500).optional(),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+})
+
 export const updateOrderStatusSchema = z.object({
   status: z.enum(['pending', 'confirmed', 'checked_in', 'in_progress', 'check_out', 'completed']),
   note: z.string().max(500).optional(),
@@ -70,4 +77,5 @@ export type CalculatePriceInput = z.infer<typeof calculatePriceSchema>
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>
 export type DeclineOrderInput = z.infer<typeof declineOrderSchema>
 export type CheckOutOrderInput = z.infer<typeof checkOutOrderSchema>
+export type CheckInOrderInput = z.infer<typeof checkInOrderSchema>
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>

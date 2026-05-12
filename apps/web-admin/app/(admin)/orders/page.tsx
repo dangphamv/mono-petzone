@@ -15,6 +15,7 @@ import { useI18n } from '@/lib/i18n'
 import { useOrders, useCancelOrder, useSendOrderMessage } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
+import { CopyableId } from '@/components/copyable-id'
 
 type Order = Record<string, unknown>
 
@@ -91,7 +92,7 @@ export default function OrdersPage() {
     {
       accessorKey: 'order_number',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('orders.order_number')} />,
-      cell: ({ row }) => <span className="font-mono text-sm font-medium">{row.original.order_number as string}</span>,
+      cell: ({ row }) => <CopyableId value={row.original.order_number as string} size="sm" className="font-medium" />,
     },
     {
       id: 'provider',

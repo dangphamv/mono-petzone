@@ -64,6 +64,20 @@ export class CheckOutOrderDto {
   note?: string;
 }
 
+export class CheckInOrderDto {
+  @ApiProperty({ example: ['https://storage.example.com/checkin1.jpg'], description: 'Pet handoff photo URLs (1-5)', type: [String] })
+  photos: string[];
+
+  @ApiPropertyOptional({ example: 'Pet arrived calm, no visible injuries. Owner left dry food (Royal Canin).', description: 'Notes recorded at handoff (pet condition, instructions)', maxLength: 500 })
+  note?: string;
+
+  @ApiPropertyOptional({ example: 10.8231, description: 'Latitude at handoff location' })
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 106.6297, description: 'Longitude at handoff location' })
+  longitude?: number;
+}
+
 export class UpdateOrderStatusDto {
   @ApiProperty({ example: 'confirmed', description: 'New order status', enum: ['confirmed', 'checked_in', 'in_progress', 'check_out', 'completed'] })
   status: 'confirmed' | 'checked_in' | 'in_progress' | 'check_out' | 'completed';

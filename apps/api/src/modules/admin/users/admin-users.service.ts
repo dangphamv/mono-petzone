@@ -22,7 +22,12 @@ export class AdminUsersService {
       .order('created_at', { ascending: false });
 
     if (role) query = query.eq('role', role);
-    if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+    if (search) {
+      const escaped = search.replace(/[,()]/g, ' ').trim();
+      if (escaped) {
+        query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,display_id.ilike.%${escaped}%`);
+      }
+    }
 
     const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);

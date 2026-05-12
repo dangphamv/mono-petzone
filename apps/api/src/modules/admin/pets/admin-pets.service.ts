@@ -23,7 +23,12 @@ export class AdminPetsService {
       if (list.length === 1) query = query.eq('species', list[0]);
       else if (list.length > 1) query = query.in('species', list);
     }
-    if (search) query = query.ilike('name', `%${search}%`);
+    if (search) {
+      const escaped = search.replace(/[,()]/g, ' ').trim();
+      if (escaped) {
+        query = query.or(`name.ilike.%${escaped}%,display_id.ilike.%${escaped}%,breed.ilike.%${escaped}%`);
+      }
+    }
 
     const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);

@@ -18,6 +18,7 @@ import {
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
+import { CopyableId } from '@/components/copyable-id'
 
 type Pet = Record<string, unknown>
 
@@ -176,9 +177,7 @@ export default function PetsPage() {
       accessorKey: 'display_id',
       header: 'ID',
       enableSorting: false,
-      cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{displayId(row.original, 'T')}</span>
-      ),
+      cell: ({ row }) => <CopyableId value={displayId(row.original, 'T')} />,
     },
     {
       accessorKey: 'name',
@@ -302,7 +301,7 @@ export default function PetsPage() {
         onPageSizeChange={table.setPageSize}
         searchValue={table.search}
         onSearchChange={table.setSearch}
-        searchPlaceholder={`${t('common.search')} ${t('pets.name').toLowerCase()}...`}
+        searchPlaceholder={`${t('common.search')} ${t('pets.name').toLowerCase()}, ID...`}
         activeFilters={table.filters}
         isLoading={isLoading}
         emptyIcon={PawPrint}

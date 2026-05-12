@@ -10,10 +10,11 @@ import {
   cancelOrderSchema,
   declineOrderSchema,
   checkOutOrderSchema,
+  checkInOrderSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, CalculatePriceDto, CancelOrderDto, DeclineOrderDto, CheckOutOrderDto, UpdateOrderStatusDto } from './dto';
+import { CreateOrderDto, CalculatePriceDto, CancelOrderDto, DeclineOrderDto, CheckOutOrderDto, CheckInOrderDto, UpdateOrderStatusDto } from './dto';
 import {
   ok,
   okPaginated,
@@ -108,6 +109,17 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
   confirmReceive(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.confirmReceive(user.id, id);
+  }
+
+  @Post(':id/check-in')
+  @ApiOperation({ summary: 'Provider records pet condition at handoff and checks the order in' })
+  @ApiResponse({ status: 201, description: 'Order checked in, handoff photos and note saved', schema: { example: ok({ ...EXAMPLE_ORDER, status: 'checked_in' }, 'Pet checked in') } })
+  @ApiResponse({ status: 400, description: 'Order not in confirmed status', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, description: 'Only the provider can check in', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Order not found', schema: { example: ERROR_404 } })
+  checkIn(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(checkInOrderSchema)) body: CheckInOrderDto) {
+    return this.ordersService.checkIn(user.id, id, body);
   }
 
   @Post(':id/check-out')

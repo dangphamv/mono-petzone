@@ -27,8 +27,8 @@ export class AdminOrdersService {
       const escaped = search.replace(/[,()]/g, ' ').trim();
       if (escaped) {
         const [providersRes, ownersRes] = await Promise.all([
-          this.supabase.client.from('providers').select('id').ilike('business_name', `%${escaped}%`),
-          this.supabase.client.from('users').select('id').or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%`),
+          this.supabase.client.from('providers').select('id').or(`business_name.ilike.%${escaped}%,display_id.ilike.%${escaped}%`),
+          this.supabase.client.from('users').select('id').or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,display_id.ilike.%${escaped}%`),
         ]);
         providerIds = (providersRes.data ?? []).map((p) => p.id as string);
         ownerIds = (ownersRes.data ?? []).map((u) => u.id as string);

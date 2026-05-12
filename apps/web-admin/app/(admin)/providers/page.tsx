@@ -19,6 +19,7 @@ import {
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
+import { CopyableId } from '@/components/copyable-id'
 
 type Provider = Record<string, unknown>
 
@@ -154,9 +155,7 @@ export default function ProvidersPage() {
       accessorKey: 'display_id',
       header: 'ID',
       enableSorting: false,
-      cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{displayId(row.original, 'P')}</span>
-      ),
+      cell: ({ row }) => <CopyableId value={displayId(row.original, 'P')} />,
     },
     {
       accessorKey: 'business_name',
@@ -298,7 +297,7 @@ export default function ProvidersPage() {
         onPageSizeChange={table.setPageSize}
         searchValue={table.search}
         onSearchChange={table.setSearch}
-        searchPlaceholder={`${t('common.search')} ${t('providers.business_name').toLowerCase()}...`}
+        searchPlaceholder={`${t('common.search')} ${t('providers.business_name').toLowerCase()}, ID...`}
         activeFilters={table.filters}
         isLoading={isLoading}
         emptyIcon={Building2}

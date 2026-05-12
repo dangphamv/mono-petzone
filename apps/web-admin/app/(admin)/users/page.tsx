@@ -14,6 +14,7 @@ import { useUsers, useSuspendUser } from '@/lib/hooks/use-admin'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
+import { CopyableId } from '@/components/copyable-id'
 
 type User = Record<string, unknown>
 
@@ -60,9 +61,7 @@ export default function UsersPage() {
       accessorKey: 'display_id',
       header: 'ID',
       enableSorting: false,
-      cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{displayId(row.original, 'U')}</span>
-      ),
+      cell: ({ row }) => <CopyableId value={displayId(row.original, 'U')} />,
     },
     {
       accessorKey: 'full_name',
@@ -86,9 +85,11 @@ export default function UsersPage() {
       enableSorting: false,
       filterFn: 'multiValue' as any,
       cell: ({ row }) => {
-        const role = row.original.role as string
-        const key = `role.${role}` as any
-        return <Badge variant="outline" className={ROLE_CLASS[role] || 'bg-violet-50 text-violet-700'}>{t(key)}</Badge>
+        const role = row.original.role as string | null | undefined
+        if (!role) {
+          return <Badge variant="outline" className="text-muted-foreground italic">{t('common.not_set')}</Badge>
+        }
+        return <Badge variant="outline" className={ROLE_CLASS[role] || 'bg-violet-50 text-violet-700'}>{t(`role.${role}` as any)}</Badge>
       },
     },
     {
@@ -161,7 +162,7 @@ export default function UsersPage() {
         onPageSizeChange={table.setPageSize}
         searchValue={table.search}
         onSearchChange={table.setSearch}
-        searchPlaceholder={`${t('common.search')} ${t('users.name').toLowerCase()}, ${t('users.email').toLowerCase()}...`}
+        searchPlaceholder={`${t('common.search')} ${t('users.name').toLowerCase()}, ${t('users.email').toLowerCase()}, ID...`}
         activeFilters={table.filters}
         isLoading={isLoading}
         emptyIcon={UsersIcon}

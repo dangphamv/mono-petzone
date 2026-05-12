@@ -225,9 +225,14 @@ export function useCancelOrder() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api(`/admin/orders/${id}/cancel`, { method: 'PATCH', body: JSON.stringify({ reason }) }),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
+      toast.success('Order cancelled')
       qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'order', id] })
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+    },
+    onError: (err: Error) => {
+      toast.error(`Cancel failed: ${err.message}`)
     },
   })
 }
@@ -282,6 +287,26 @@ export function useDisputes(params: TableQueryParams = {}) {
           meta: { total: filtered.length, page, limit, totalPages: Math.ceil(filtered.length / limit) },
         }
       }
+    },
+  })
+}
+
+export function useCreateDispute() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      order_id: string
+      opened_by_role: 'owner' | 'provider'
+      description: string
+      evidence_photos?: string[]
+    }) => api('/admin/disputes', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Dispute created')
+      qc.invalidateQueries({ queryKey: ['admin', 'disputes'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+    },
+    onError: (err: Error) => {
+      toast.error(`Error: ${err.message}`)
     },
   })
 }

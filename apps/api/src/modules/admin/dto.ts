@@ -21,6 +21,20 @@ export class ResolveDisputeDto {
   refund_amount?: number;
 }
 
+export class AdminCreateDisputeDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Order UUID' })
+  order_id: string;
+
+  @ApiProperty({ enum: ['owner', 'provider'], example: 'owner', description: 'Party opening the dispute' })
+  opened_by_role: 'owner' | 'provider';
+
+  @ApiProperty({ example: 'Owner reported pet returned with injuries.', description: 'Dispute description (1-2000 chars)' })
+  description: string;
+
+  @ApiPropertyOptional({ example: ['https://storage.example.com/evidence1.jpg'], type: [String], description: 'Evidence photo URLs (max 10)', default: [] })
+  evidence_photos: string[];
+}
+
 export class SuspendUserDto {
   @ApiProperty({ example: 'Repeated policy violations', description: 'Suspension reason (1-500 chars)' })
   reason: string;

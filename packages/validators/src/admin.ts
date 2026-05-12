@@ -57,6 +57,13 @@ export const resolveDisputeSchema = z.object({
   refund_amount: z.number().min(0).optional(),
 })
 
+export const adminCreateDisputeSchema = z.object({
+  order_id: z.string().uuid(),
+  opened_by_role: z.enum(['owner', 'provider']),
+  description: z.string().min(1).max(2000),
+  evidence_photos: z.array(z.string().url()).max(10).default([]),
+})
+
 export const suspendUserSchema = z.object({
   reason: z.string().min(1).max(500),
   is_permanent: z.boolean().default(false),
@@ -94,6 +101,7 @@ export type AdminCreatePetInput = z.infer<typeof adminCreatePetSchema>
 export type AdminUpdatePetInput = z.infer<typeof adminUpdatePetSchema>
 export type RequestInfoInput = z.infer<typeof requestInfoSchema>
 export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>
+export type AdminCreateDisputeInput = z.infer<typeof adminCreateDisputeSchema>
 export type SuspendUserInput = z.infer<typeof suspendUserSchema>
 export type ModerateReviewInput = z.infer<typeof moderateReviewSchema>
 

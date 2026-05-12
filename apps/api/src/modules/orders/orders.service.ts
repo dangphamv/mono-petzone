@@ -7,7 +7,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, ORDER_HISTORY_COLUMNS, CHECK_IN_PHOTO_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
-import type { CreateOrderInput, CalculatePriceInput, UpdateOrderStatusInput, CancelOrderInput, DeclineOrderInput, CheckOutOrderInput } from '@petzone/validators';
+import type { CreateOrderInput, CalculatePriceInput, UpdateOrderStatusInput, CancelOrderInput, DeclineOrderInput, CheckOutOrderInput, CheckInOrderInput } from '@petzone/validators';
 
 const STATUS_TRANSITIONS: Record<string, { next: string; allowed_actors: string[] }[]> = {
   pending_payment: [{ next: 'pending', allowed_actors: ['owner'] }],
@@ -288,6 +288,40 @@ export class OrdersService {
 
     await this.supabase.client.from('order_status_history').insert({
       order_id: id, status: 'completed', actor_id: userId, actor_type: 'owner',
+    });
+
+    return data;
+  }
+
+  async checkIn(userId: string, id: string, body: CheckInOrderInput) {
+    const order = await this.getOrderForProvider(userId, id);
+    if (order.status !== 'confirmed') throw new BadRequestException('Can only check in orders in confirmed status');
+
+    const photoRows = body.photos.map((url) => ({
+      order_id: id,
+      uploaded_by: userId,
+      role: 'provider',
+      handoff_point: 'owner_to_store',
+      photo_url: url,
+      latitude: body.latitude ?? null,
+      longitude: body.longitude ?? null,
+      has_concern: false,
+      concern_note: body.note ?? null,
+    }));
+
+    const { error: photoErr } = await this.supabase.client.from('check_in_photos').insert(photoRows);
+    if (photoErr) throw new BadRequestException(photoErr.message);
+
+    const { data, error } = await this.supabase.client
+      .from('orders')
+      .update({ status: 'checked_in', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(ORDER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.supabase.client.from('order_status_history').insert({
+      order_id: id, status: 'checked_in', actor_id: userId, actor_type: 'provider', note: body.note || null,
     });
 
     return data;

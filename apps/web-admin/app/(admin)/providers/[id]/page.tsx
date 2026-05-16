@@ -15,7 +15,7 @@ import {
 import {
   ArrowLeft, ClipboardList, MapPin, Phone, BadgeCheck, ShieldCheck,
   Star, Mail, User, PawPrint, Scale, FileCheck2, Image as ImageIcon,
-  CheckCircle2, XCircle, Building2,
+  CheckCircle2, XCircle, Building2, Landmark, AlertTriangle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -42,7 +42,7 @@ const TONE: Record<string, { bg: string; text: string; border: string }> = {
 
 export default function ProviderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const router = useRouter()
 
   const statusLabel = (s: string) =>
@@ -93,6 +93,10 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
   const ownerInitial = ownerName?.[0]?.toUpperCase() || '?'
 
   const verificationStatus = provider.verification_status as string
+  const bankName = provider.bank_name as string | null | undefined
+  const bankHolder = provider.bank_account_holder as string | null | undefined
+  const bankVerifiedAt = provider.bank_verified_at as string | null | undefined
+  const hasBankInfo = Boolean(bankName && bankHolder)
   const ratingAvg = provider.rating_average ? Number(provider.rating_average) : null
   const ratingCount = Number(provider.rating_count) || 0
   const acceptedSpecies = (provider.accepted_species as string[]) || []
@@ -156,15 +160,61 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {verificationStatus === 'pending' && (
-            <div className="flex shrink-0 gap-2">
-              <Button size="sm" onClick={() => setAction('approved')}>
-                <CheckCircle2 size={14} /> {t('providers.approve')}
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => setAction('rejected')}>
-                <XCircle size={14} /> {t('providers.reject')}
-              </Button>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => setAction('approved')}
+                  disabled={!hasBankInfo}
+                  title={!hasBankInfo ? t('providers.bank.required_tooltip') : undefined}
+                >
+                  <CheckCircle2 size={14} /> {t('providers.approve')}
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setAction('rejected')}>
+                  <XCircle size={14} /> {t('providers.reject')}
+                </Button>
+              </div>
+              {!hasBankInfo && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertTriangle size={12} /> {t('providers.bank.pending')}
+                </p>
+              )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Bank info — required for VietQR v1 (direct-to-provider) + v2 payout */}
+      <Card className="mt-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Landmark size={16} className="text-primary" />
+            {t('providers.bank.title')}
+            {hasBankInfo ? (
+              <Badge variant={bankVerifiedAt ? 'success' : 'warning'} className="ml-auto gap-1">
+                {bankVerifiedAt ? <ShieldCheck size={12} /> : <AlertTriangle size={12} />}
+                {bankVerifiedAt ? t('providers.bank.verified') : t('providers.bank.unverified')}
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="ml-auto">{t('providers.bank.missing')}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('providers.bank.bank')}</p>
+            <p className="mt-1 font-medium">{bankName || <span className="text-muted-foreground">—</span>}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('providers.bank.holder')}</p>
+            <p className="mt-1 font-medium">{bankHolder || <span className="text-muted-foreground">—</span>}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('providers.bank.verified_at')}</p>
+            <p className="mt-1 font-medium">
+              {bankVerifiedAt ? new Date(bankVerifiedAt).toLocaleString(locale) : <span className="text-muted-foreground">—</span>}
+            </p>
+          </div>
         </CardContent>
       </Card>
 

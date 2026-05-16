@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const createPaymentSchema = z.object({
   order_id: z.string().uuid(),
-  method: z.enum(['momo', 'zalopay', 'vnpay', 'bank_transfer']),
+  method: z.enum(['momo', 'zalopay', 'vnpay', 'bank_transfer', 'vietqr', 'cash']),
   return_url: z.string().url().optional(),
 })
 

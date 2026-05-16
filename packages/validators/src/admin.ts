@@ -107,13 +107,31 @@ export type ModerateReviewInput = z.infer<typeof moderateReviewSchema>
 
 export const updateConfigSchema = z.object({
   commission_rate: z.number().min(0).max(1).optional(),
+  commission_rate_v1: z.number().min(0).max(1).optional(),
   auto_confirm_hours: z.number().int().positive().optional(),
   payment_timeout_hours: z.number().int().positive().optional(),
+  payments_v2_enabled: z.boolean().optional(),
+  vietqr_enabled: z.boolean().optional(),
+  momo_enabled: z.boolean().optional(),
+  cash_enabled: z.boolean().optional(),
 })
 
 export const adminMessageSchema = z.object({
   message: z.string().min(1).max(2000),
 })
 
+export const recordManualRefundSchema = z.object({
+  amount: z.number().int().positive(),
+  reason: z.string().min(1).max(500),
+  proof_url: z.string().url().optional(),
+  note: z.string().max(1000).optional(),
+})
+
+export const matchBankTransactionSchema = z.object({
+  payment_id: z.string().uuid(),
+})
+
 export type UpdateConfigInput = z.infer<typeof updateConfigSchema>
 export type AdminMessageInput = z.infer<typeof adminMessageSchema>
+export type RecordManualRefundInput = z.infer<typeof recordManualRefundSchema>
+export type MatchBankTransactionInput = z.infer<typeof matchBankTransactionSchema>

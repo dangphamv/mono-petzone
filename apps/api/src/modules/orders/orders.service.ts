@@ -4,10 +4,13 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, ORDER_HISTORY_COLUMNS, CHECK_IN_PHOTO_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
 import type { CreateOrderInput, CalculatePriceInput, UpdateOrderStatusInput, CancelOrderInput, DeclineOrderInput, CheckOutOrderInput, CheckInOrderInput } from '@petzone/validators';
+import { NOTIFICATION_EVENTS } from '@petzone/shared';
 
 const STATUS_TRANSITIONS: Record<string, { next: string; allowed_actors: string[] }[]> = {
   pending_payment: [{ next: 'pending', allowed_actors: ['owner'] }],
@@ -28,13 +31,20 @@ interface OrderWithProvider {
   check_in_date: string;
   total_price: number;
   cancellation_policy: string;
+  payment_version?: number;
   providers?: { id: string; user_id: string }[] | { id: string; user_id: string } | null;
   [key: string]: unknown;
 }
 
+const OWNER_CONFIRM_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class OrdersService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly events: EventEmitter2,
+    private readonly config: ConfigService,
+  ) {}
 
   async calculatePrice(body: CalculatePriceInput) {
     const { data: roomType, error: rtErr } = await this.supabase.client
@@ -150,6 +160,8 @@ export class OrdersService {
 
     const { data: provider } = providerResult;
 
+    const paymentVersion = (await this.isPaymentsV2Enabled()) ? 2 : 1;
+
     const { data: order, error: orderErr } = await this.supabase.client
       .from('orders')
       .insert({
@@ -167,6 +179,7 @@ export class OrdersService {
         price_breakdown: priceBreakdown,
         total_price: totalPrice,
         cancellation_policy: provider?.cancellation_policy || 'flexible',
+        payment_version: paymentVersion,
       })
       .select(ORDER_COLUMNS)
       .single();
@@ -237,6 +250,13 @@ export class OrdersService {
       order_id: id, status: 'confirmed', actor_id: userId, actor_type: 'provider',
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_CONFIRMED, {
+      owner_id: order.owner_id,
+      provider_user_id: this.getProviderUserId(order),
+      order_id: id,
+      order_number: (data as { order_number?: string }).order_number ?? '',
+    });
+
     return data;
   }
 
@@ -263,24 +283,37 @@ export class OrdersService {
       order_id: id, status: 'cancelled', actor_id: userId, actor_type: 'provider', note: body.reason,
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_DECLINED, {
+      owner_id: order.owner_id,
+      provider_user_id: this.getProviderUserId(order),
+      order_id: id,
+      order_number: (data as { order_number?: string }).order_number ?? '',
+      reason: body.reason,
+    });
+
     return data;
   }
 
   async confirmReceive(userId: string, id: string) {
     const { data: order, error: fetchErr } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
+      .select(`${ORDER_COLUMNS}, payment_version, providers(id, user_id)`)
       .eq('id', id)
       .single();
     if (fetchErr || !order) throw new NotFoundException('Order not found');
 
-    const typedOrder = order as unknown as OrderWithProvider;
+    const typedOrder = order as unknown as OrderWithProvider & { payment_version: number };
     if (typedOrder.owner_id !== userId) throw new ForbiddenException('Only the owner can confirm receipt');
     if (typedOrder.status !== 'check_out') throw new BadRequestException('Can only confirm receipt for orders in check_out status');
 
     const { data, error } = await this.supabase.client
       .from('orders')
-      .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        owner_confirm_deadline: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select(ORDER_COLUMNS)
       .single();
@@ -288,6 +321,17 @@ export class OrdersService {
 
     await this.supabase.client.from('order_status_history').insert({
       order_id: id, status: 'completed', actor_id: userId, actor_type: 'owner',
+    });
+
+    if (typedOrder.payment_version === 2) {
+      this.events.emit('order.v2.completed', { order_id: id, actor_id: userId });
+    }
+
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_COMPLETED, {
+      owner_id: typedOrder.owner_id,
+      provider_user_id: this.getProviderUserId(typedOrder),
+      order_id: id,
+      order_number: (data as { order_number?: string }).order_number ?? '',
     });
 
     return data;
@@ -324,6 +368,13 @@ export class OrdersService {
       order_id: id, status: 'checked_in', actor_id: userId, actor_type: 'provider', note: body.note || null,
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_CHECKED_IN, {
+      owner_id: order.owner_id,
+      provider_user_id: this.getProviderUserId(order),
+      order_id: id,
+      order_number: (data as { order_number?: string }).order_number ?? '',
+    });
+
     return data;
   }
 
@@ -348,9 +399,16 @@ export class OrdersService {
       });
     }
 
+    const updates: Record<string, unknown> = { status: 'check_out', updated_at: new Date().toISOString() };
+    // v1 owners get a 24h window to confirm receipt; cron auto-completes after.
+    // v2 providers drive check_out → completed themselves, so no deadline.
+    if (order.payment_version !== 2) {
+      updates.owner_confirm_deadline = new Date(Date.now() + OWNER_CONFIRM_TIMEOUT_MS).toISOString();
+    }
+
     const { data, error } = await this.supabase.client
       .from('orders')
-      .update({ status: 'check_out', updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', id)
       .select(ORDER_COLUMNS)
       .single();
@@ -360,18 +418,25 @@ export class OrdersService {
       order_id: id, status: 'check_out', actor_id: userId, actor_type: 'provider', note: body.note || null,
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_CHECK_OUT, {
+      owner_id: order.owner_id,
+      provider_user_id: this.getProviderUserId(order),
+      order_id: id,
+      order_number: (data as { order_number?: string }).order_number ?? '',
+    });
+
     return data;
   }
 
   async updateStatus(userId: string, id: string, body: UpdateOrderStatusInput) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
+      .select(`${ORDER_COLUMNS}, payment_version, providers(id, user_id)`)
       .eq('id', id)
       .single();
     if (error || !order) throw new NotFoundException('Order not found');
 
-    const typedOrder = order as unknown as OrderWithProvider;
+    const typedOrder = order as unknown as OrderWithProvider & { payment_version: number };
     const actorType = await this.getActorType(userId, typedOrder);
     const transitions = STATUS_TRANSITIONS[typedOrder.status];
     if (!transitions) throw new BadRequestException(`Cannot transition from status '${typedOrder.status}'`);
@@ -381,9 +446,21 @@ export class OrdersService {
     if (!transition.allowed_actors.includes(actorType))
       throw new ForbiddenException(`Role '${actorType}' cannot perform this transition`);
 
+    // v2 path: provider drives check_out → completed (matches PSP-split design).
+    // v1 path: owner only (legacy confirmReceive). Reject provider on v1 orders here.
+    if (body.status === 'completed' && actorType === 'provider' && typedOrder.payment_version !== 2) {
+      throw new ForbiddenException('Only the owner can mark a v1 order completed; use /orders/:id/confirm-receive');
+    }
+
     const updates: Record<string, unknown> = { status: body.status, updated_at: new Date().toISOString() };
     if (body.status === 'confirmed') updates.provider_response_deadline = null;
-    if (body.status === 'completed') updates.completed_at = new Date().toISOString();
+    if (body.status === 'check_out' && typedOrder.payment_version !== 2) {
+      updates.owner_confirm_deadline = new Date(Date.now() + OWNER_CONFIRM_TIMEOUT_MS).toISOString();
+    }
+    if (body.status === 'completed') {
+      updates.completed_at = new Date().toISOString();
+      updates.owner_confirm_deadline = null;
+    }
 
     const { data: updated, error: updateErr } = await this.supabase.client
       .from('orders')
@@ -400,6 +477,10 @@ export class OrdersService {
       actor_type: actorType,
       note: body.note || null,
     });
+
+    if (body.status === 'completed' && typedOrder.payment_version === 2) {
+      this.events.emit('order.v2.completed', { order_id: id, actor_id: userId });
+    }
 
     return updated;
   }
@@ -444,6 +525,15 @@ export class OrdersService {
       note: body.reason,
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
+      owner_id: typedOrder.owner_id,
+      provider_user_id: this.getProviderUserId(typedOrder),
+      order_id: id,
+      order_number: (updated as { order_number?: string }).order_number ?? '',
+      cancelled_by: cancelledBy,
+      reason: body.reason,
+    });
+
     return updated;
   }
 
@@ -469,7 +559,7 @@ export class OrdersService {
   private async getOrderForProvider(userId: string, orderId: string): Promise<OrderWithProvider> {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_COLUMNS}, providers(id, user_id)`)
+      .select(`${ORDER_COLUMNS}, payment_version, providers(id, user_id)`)
       .eq('id', orderId)
       .single();
     if (error || !order) throw new NotFoundException('Order not found');
@@ -496,6 +586,18 @@ export class OrdersService {
     if (order.owner_id === userId) return 'owner';
     if (this.getProviderUserId(order) === userId) return 'provider';
     throw new ForbiddenException('No access to this order');
+  }
+
+  private async isPaymentsV2Enabled(): Promise<boolean> {
+    // Runtime override via app_config (set by admin UI); falls back to env.
+    const { data } = await this.supabase.client
+      .from('app_config')
+      .select('value')
+      .eq('key', 'payments_v2_enabled')
+      .maybeSingle();
+    const v = (data as { value: string } | null)?.value;
+    if (v != null) return v === 'true' || v === '1';
+    return this.config.get<string>('PAYMENTS_V2_ENABLED') === 'true';
   }
 
   private calculateRefund(order: OrderWithProvider): number {

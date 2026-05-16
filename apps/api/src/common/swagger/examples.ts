@@ -448,6 +448,7 @@ export const EXAMPLE_PAYOUT = {
   id: PAYOUT_ID,
   provider_id: PROVIDER_ID,
   order_id: ORDER_ID,
+  recipient: 'provider',
   gross_amount: 1200000,
   commission_rate: 0.15,
   commission_amount: 180000,

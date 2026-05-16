@@ -102,6 +102,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const totalPrice = Number(order.total_price) || 0
   const numNights = Number(order.num_nights) || 0
   const ext = MOCK_ORDER_EXTENDED
+  const paymentVersion = Number(order.payment_version) || 1
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
@@ -120,6 +121,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <h1 className="font-heading text-2xl font-bold">#{order.order_number as string}</h1>
               <CopyableId value={order.order_number as string} showIcon />
               <Badge variant={statusVariant}>{t(`status.${status}` as any) || status}</Badge>
+              {paymentVersion === 2 && (
+                <Badge variant="outline" className="border-primary/40 bg-primary/5 text-primary">
+                  v2 · 9Pay PSP
+                </Badge>
+              )}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {t('common.created_at')}: {formatDate(order.created_at as string)}

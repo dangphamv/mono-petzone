@@ -8,8 +8,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
-  app.use(json({ limit: '15mb' }));
-  app.use(urlencoded({ limit: '15mb', extended: true }));
+  const captureRawBody = (req: unknown, _res: unknown, buf: Buffer) => {
+    if (buf?.length) (req as { rawBody?: Buffer }).rawBody = buf;
+  };
+  app.use(json({ limit: '15mb', verify: captureRawBody as never }));
+  app.use(urlencoded({ limit: '15mb', extended: true, verify: captureRawBody as never }));
   app.use(compression());
   app.use(helmet({ contentSecurityPolicy: false }));
 
@@ -43,7 +46,8 @@ async function bootstrap() {
     .addTag('Providers', 'Provider listing & management')
     .addTag('Search', 'Search & discovery')
     .addTag('Orders', 'Booking & order management')
-    .addTag('Payments', 'Payment & escrow')
+    .addTag('Payments', 'Payment & escrow (v1, legacy)')
+    .addTag('Payments v2', 'Payment & escrow via PSP (9Pay) with split payout')
     .addTag('Check-in', 'Photo check-in at handoff')
     .addTag('Status Reports', 'Daily status reports')
     .addTag('Chat', 'Real-time messaging')
@@ -66,8 +70,8 @@ async function bootstrap() {
     ],
   });
 
-  const port = process.env['API_PORT'] ?? 3001;
-  await app.listen(port);
+  const port = process.env['PORT'] ?? process.env['API_PORT'] ?? 3001;
+  await app.listen(port, '0.0.0.0');
   console.warn(`API running on http://localhost:${port}`);
   console.warn(`Swagger docs: http://localhost:${port}/api/docs`);
   console.warn(`OpenAPI JSON: http://localhost:${port}/api/docs-json`);

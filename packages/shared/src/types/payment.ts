@@ -1,10 +1,12 @@
-export type PaymentMethod = 'momo' | 'zalopay' | 'vnpay' | 'bank_transfer'
+export type PaymentMethod = 'momo' | 'zalopay' | 'vnpay' | 'bank_transfer' | 'vietqr' | 'cash'
 
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded' | 'partially_refunded'
 
 export type EscrowType = 'hold' | 'release' | 'refund'
 
 export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export type PayoutRecipient = 'provider' | 'petzone'
 
 export interface Payment {
   id: string
@@ -35,6 +37,7 @@ export interface ProviderPayout {
   id: string
   provider_id: string
   order_id: string
+  recipient: PayoutRecipient
   gross_amount: number
   commission_rate: number
   commission_amount: number

@@ -9,7 +9,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { SupabaseService } from '../supabase/supabase.service';
-import { PROVIDER_COLUMNS, ROOM_COLUMNS, ADDON_COLUMNS, AVAILABILITY_COLUMNS, ORDER_LIST_COLUMNS } from '../../common/constants/columns';
+import { PROVIDER_COLUMNS, PROVIDER_COLUMNS_ADMIN, ROOM_COLUMNS, ADDON_COLUMNS, AVAILABILITY_COLUMNS, ORDER_LIST_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
 import type {
   RegisterProviderInput,
@@ -21,6 +21,7 @@ import type {
   UpdateAddOnInput,
   UpdateAvailabilityInput,
   BulkUpdateAvailabilityInput,
+  UpdateProviderBankInput,
 } from '@petzone/validators';
 
 const PROVIDER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -186,6 +187,15 @@ export class ProvidersService {
       throw new BadRequestException('Provider is already approved');
     }
 
+    const { data: full } = await this.supabase.client
+      .from('providers')
+      .select('bank_name, bank_account_number_encrypted, bank_account_holder')
+      .eq('id', provider.id)
+      .single();
+    if (!full?.bank_name || !full.bank_account_number_encrypted || !full.bank_account_holder) {
+      throw new BadRequestException('Bank account info is required before submitting for verification');
+    }
+
     const { data, error } = await this.supabase.client
       .from('providers')
       .update({ verification_status: 'pending' })
@@ -196,6 +206,48 @@ export class ProvidersService {
     if (error) throw new BadRequestException(error.message);
     await this.invalidateProviderCache(provider.id);
     return data;
+  }
+
+  async updateBankInfo(userId: string, body: UpdateProviderBankInput) {
+    const provider = await this.getProviderByUserId(userId);
+
+    const { data, error } = await this.supabase.client
+      .from('providers')
+      .update({
+        bank_name: body.bank_name,
+        bank_account_number_encrypted: body.bank_account_number,
+        bank_account_holder: body.bank_account_holder,
+        bank_verified_at: null,
+        bank_verified_by: null,
+      })
+      .eq('id', provider.id)
+      .select(PROVIDER_COLUMNS_ADMIN)
+      .single();
+
+    if (error || !data) throw new BadRequestException(error?.message || 'Failed to update bank info');
+    await this.invalidateProviderCache(provider.id);
+    return data;
+  }
+
+  async getBankInfo(userId: string) {
+    const provider = await this.getProviderByUserId(userId);
+    const { data } = await this.supabase.client
+      .from('providers')
+      .select('bank_name, bank_account_holder, bank_verified_at')
+      .eq('id', provider.id)
+      .single();
+    if (!data) return { bank_name: null, bank_account_holder: null, bank_verified_at: null, has_account_number: false };
+    const { data: full } = await this.supabase.client
+      .from('providers')
+      .select('bank_account_number_encrypted')
+      .eq('id', provider.id)
+      .single();
+    const raw = full?.bank_account_number_encrypted as string | null;
+    return {
+      ...data,
+      bank_account_number_masked: raw && raw.length > 4 ? `****${raw.slice(-4)}` : null,
+      has_account_number: Boolean(raw),
+    };
   }
 
   async getVerificationStatus(userId: string) {

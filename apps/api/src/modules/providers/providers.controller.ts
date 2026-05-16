@@ -15,6 +15,7 @@ import {
   updateAvailabilitySchema,
   bulkUpdateAvailabilitySchema,
   uploadDocumentsSchema,
+  updateProviderBankSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { ProvidersService } from './providers.service';
@@ -22,6 +23,7 @@ import {
   RegisterProviderDto, UpdateListingDto, UploadDocumentsDto,
   CreateRoomDto, UpdateRoomDto, CreateAddOnDto, UpdateAddOnDto,
   UpdateAvailabilityDto, BulkUpdateAvailabilityDto,
+  UpdateProviderBankDto,
   VerificationStatusResponseDto,
 } from './dto';
 import {
@@ -264,6 +266,26 @@ export class ProvidersController {
   @ApiResponse({ status: 403, description: 'Not a provider', schema: { example: ERROR_403 } })
   bulkUpdateAvailability(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(bulkUpdateAvailabilitySchema)) body: BulkUpdateAvailabilityDto) {
     return this.providersService.bulkUpdateAvailability(user.id, body);
+  }
+
+  @Get('me/bank')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get own bank info (masked)' })
+  @ApiResponse({ status: 200, description: 'Bank info returned' })
+  @ApiResponse({ status: 403, schema: { example: ERROR_403 } })
+  getBankInfo(@CurrentUser() user: AuthUser) {
+    return this.providersService.getBankInfo(user.id);
+  }
+
+  @Put('me/bank')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update own bank info (required for v2 payouts)' })
+  @ApiResponse({ status: 200, description: 'Bank info updated' })
+  @ApiResponse({ status: 400, schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, schema: { example: ERROR_401 } })
+  @ApiResponse({ status: 403, schema: { example: ERROR_403 } })
+  updateBankInfo(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(updateProviderBankSchema)) body: UpdateProviderBankDto) {
+    return this.providersService.updateBankInfo(user.id, body);
   }
 
   @Get(':id')

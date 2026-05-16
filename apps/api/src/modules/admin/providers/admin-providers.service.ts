@@ -7,7 +7,7 @@ import type {
   RequestInfoInput,
 } from '@petzone/validators';
 import { SupabaseService } from '../../supabase/supabase.service';
-import { PROVIDER_COLUMNS, ROOM_COLUMNS, ADDON_COLUMNS } from '../../../common/constants/columns';
+import { PROVIDER_COLUMNS, PROVIDER_COLUMNS_ADMIN, ROOM_COLUMNS, ADDON_COLUMNS } from '../../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../../common/utils/pagination';
 import { AdminActionLogService } from '../_shared/admin-action-log.service';
 
@@ -69,7 +69,7 @@ export class AdminProvidersService {
   async getProviderDetail(id: string) {
     const { data, error } = await this.supabase.client
       .from('providers')
-      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`)
+      .select(`${PROVIDER_COLUMNS_ADMIN}, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`)
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException('Provider not found');
@@ -207,14 +207,31 @@ export class AdminProvidersService {
   }
 
   async verifyProvider(userId: string, id: string, body: VerifyProviderInput) {
+    if (body.status === 'approved') {
+      const { data: bank } = await this.supabase.client
+        .from('providers')
+        .select('bank_name, bank_account_number_encrypted, bank_account_holder')
+        .eq('id', id)
+        .single();
+      if (!bank?.bank_name || !bank.bank_account_number_encrypted || !bank.bank_account_holder) {
+        throw new BadRequestException('Provider bank info is required before approval (needed for v2 payout)');
+      }
+    }
+
+    const updates: Record<string, unknown> = {
+      verification_status: body.status,
+      verification_notes: body.notes || null,
+      verified_at: new Date().toISOString(),
+      verified_by: userId,
+    };
+    if (body.status === 'approved') {
+      updates.bank_verified_at = new Date().toISOString();
+      updates.bank_verified_by = userId;
+    }
+
     const { data, error } = await this.supabase.client
       .from('providers')
-      .update({
-        verification_status: body.status,
-        verification_notes: body.notes || null,
-        verified_at: new Date().toISOString(),
-        verified_by: userId,
-      })
+      .update(updates)
       .eq('id', id)
       .select(PROVIDER_COLUMNS)
       .single();

@@ -36,13 +36,15 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   disputed: 'Tranh chấp',
 }
 
-export const PAYMENT_METHODS: PaymentMethod[] = ['momo', 'zalopay', 'vnpay', 'bank_transfer']
+export const PAYMENT_METHODS: PaymentMethod[] = ['vietqr', 'cash', 'momo', 'zalopay', 'vnpay', 'bank_transfer']
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  vietqr: 'Chuyển khoản QR (VietQR)',
+  cash: 'Tiền mặt khi check-in',
   momo: 'MoMo',
   zalopay: 'ZaloPay',
   vnpay: 'VNPay',
-  bank_transfer: 'Chuyển khoản',
+  bank_transfer: 'Chuyển khoản thủ công',
 }
 
 export const CANCELLATION_POLICIES: Record<CancellationPolicy, { label: string; rules: { hours: number; refund_pct: number }[] }> = {

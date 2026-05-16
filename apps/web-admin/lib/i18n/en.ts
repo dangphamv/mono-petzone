@@ -64,6 +64,7 @@ export const en = {
   'nav.users': 'Users',
   'nav.pets': 'Pets',
   'nav.reviews': 'Reviews',
+  'nav.bank_transactions': 'Bank reconciliation',
   'nav.analytics': 'Analytics',
   'nav.config': 'Settings',
   'nav.menu': 'Menu',
@@ -387,6 +388,15 @@ export const en = {
   'providers.cancellation_policy.flexible': 'Flexible',
   'providers.cancellation_policy.moderate': 'Moderate',
   'providers.cancellation_policy.strict': 'Strict',
+  'providers.bank.title': 'Bank account',
+  'providers.bank.bank': 'Bank',
+  'providers.bank.holder': 'Account holder',
+  'providers.bank.verified_at': 'Verified at',
+  'providers.bank.verified': 'Verified',
+  'providers.bank.unverified': 'Unverified',
+  'providers.bank.missing': 'Missing',
+  'providers.bank.pending': 'Bank info pending',
+  'providers.bank.required_tooltip': 'Bank info required before approval (used for VietQR and v2 payout)',
 
   // Orders - Extended info
   'orders.payment_method': 'Payment Method',

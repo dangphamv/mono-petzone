@@ -64,6 +64,7 @@ export const vi = {
   'nav.users': 'Người dùng',
   'nav.pets': 'Thú cưng',
   'nav.reviews': 'Đánh giá',
+  'nav.bank_transactions': 'Đối soát ngân hàng',
   'nav.analytics': 'Thống kê',
   'nav.config': 'Cấu hình',
   'nav.menu': 'Menu',
@@ -387,6 +388,15 @@ export const vi = {
   'providers.cancellation_policy.flexible': 'Linh hoạt',
   'providers.cancellation_policy.moderate': 'Trung bình',
   'providers.cancellation_policy.strict': 'Nghiêm ngặt',
+  'providers.bank.title': 'Tài khoản ngân hàng',
+  'providers.bank.bank': 'Ngân hàng',
+  'providers.bank.holder': 'Chủ tài khoản',
+  'providers.bank.verified_at': 'Thời gian xác minh',
+  'providers.bank.verified': 'Đã xác minh',
+  'providers.bank.unverified': 'Chưa xác minh',
+  'providers.bank.missing': 'Thiếu',
+  'providers.bank.pending': 'Chưa có thông tin ngân hàng',
+  'providers.bank.required_tooltip': 'Cần thông tin ngân hàng trước khi duyệt (dùng cho VietQR và payout v2)',
 
   // Orders - Extended info
   'orders.payment_method': 'Phương thức thanh toán',

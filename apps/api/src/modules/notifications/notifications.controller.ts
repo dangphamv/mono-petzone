@@ -1,12 +1,19 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { PAGINATION } from '@petzone/shared';
+import {
+  PAGINATION,
+  NOTIFICATION_TYPES,
+  NOTIFICATION_TYPE_LABELS,
+  NOTIFICATION_EVENTS,
+  NOTIFICATION_EVENT_TYPE_MAP,
+} from '@petzone/shared';
 import { registerDeviceTokenSchema } from '@petzone/validators';
+import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { NotificationsService } from './notifications.service';
-import { RegisterDeviceTokenDto } from './dto';
+import { RegisterDeviceTokenDto, NotificationMetaDto } from './dto';
 import {
   ok,
   okPaginated,
@@ -23,6 +30,62 @@ import {
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Get('meta')
+  @Public()
+  @ApiOperation({
+    summary: 'Notification system metadata',
+    description:
+      'Returns the full enum lists for notification types + events so the mobile app can use them as a single source of truth (icon mapping, deep-link routing, analytics tags). No auth needed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Meta info',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          types: [
+            { value: 'order_status', label: 'Trạng thái đơn hàng' },
+            { value: 'payment', label: 'Thanh toán' },
+            { value: 'new_message', label: 'Tin nhắn mới' },
+          ],
+          events: [
+            { key: 'PAYMENT_COMPLETED', value: 'payment.completed', type: 'payment' },
+            { key: 'ORDER_CONFIRMED', value: 'order.confirmed', type: 'order_status' },
+          ],
+          deep_link_scheme: 'petzone',
+          fcm_data_keys: ['type', 'event', 'notification_id', 'click_action', 'order_id', 'order_number', 'amount', 'gateway', 'conversation_id', 'sender_id'],
+        },
+      },
+    },
+  })
+  getMeta(): NotificationMetaDto {
+    return {
+      types: NOTIFICATION_TYPES.map((value) => ({
+        value,
+        label: NOTIFICATION_TYPE_LABELS[value],
+      })),
+      events: Object.entries(NOTIFICATION_EVENTS).map(([key, value]) => ({
+        key,
+        value,
+        type: NOTIFICATION_EVENT_TYPE_MAP[value],
+      })),
+      deep_link_scheme: 'petzone',
+      fcm_data_keys: [
+        'type',
+        'event',
+        'notification_id',
+        'click_action',
+        'order_id',
+        'order_number',
+        'amount',
+        'gateway',
+        'conversation_id',
+        'sender_id',
+      ],
+    };
+  }
 
   @Get()
   @ApiOperation({ summary: 'List notifications for current user' })

@@ -192,6 +192,17 @@ export class VerificationStatusResponseDto {
   verified_at?: string | null;
 }
 
+export class UpdateProviderBankDto {
+  @ApiProperty({ example: 'Vietcombank', description: 'Bank name', maxLength: 100 })
+  bank_name: string;
+
+  @ApiProperty({ example: '0123456789012', description: 'Bank account number (6-20 digits)' })
+  bank_account_number: string;
+
+  @ApiProperty({ example: 'NGUYEN VAN A', description: 'Account holder name', maxLength: 200 })
+  bank_account_holder: string;
+}
+
 export class BulkUpdateAvailabilityDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Room type UUID' })
   room_type_id: string;

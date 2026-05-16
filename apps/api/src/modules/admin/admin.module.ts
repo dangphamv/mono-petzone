@@ -17,6 +17,8 @@ import { AdminReviewsController } from './reviews/admin-reviews.controller';
 import { AdminReviewsService } from './reviews/admin-reviews.service';
 import { AdminConfigController } from './config/admin-config.controller';
 import { AdminConfigService } from './config/admin-config.service';
+import { AdminPaymentsController } from './payments/admin-payments.controller';
+import { AdminPaymentsService } from './payments/admin-payments.service';
 
 @Module({
   imports: [OrdersModule],
@@ -29,6 +31,7 @@ import { AdminConfigService } from './config/admin-config.service';
     AdminPetsController,
     AdminReviewsController,
     AdminConfigController,
+    AdminPaymentsController,
   ],
   providers: [
     AdminActionLogService,
@@ -40,6 +43,7 @@ import { AdminConfigService } from './config/admin-config.service';
     AdminPetsService,
     AdminReviewsService,
     AdminConfigService,
+    AdminPaymentsService,
   ],
 })
 export class AdminModule {}

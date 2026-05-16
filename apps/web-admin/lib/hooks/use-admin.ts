@@ -54,8 +54,13 @@ interface AnalyticsData {
 
 interface ConfigData {
   commission_rate: number
+  commission_rate_v1?: number
   auto_confirm_hours: number
   payment_timeout_hours: number
+  payments_v2_enabled?: boolean
+  vietqr_enabled?: boolean
+  momo_enabled?: boolean
+  cash_enabled?: boolean
 }
 
 export interface TableQueryParams {
@@ -534,7 +539,7 @@ export function useConfig() {
         return (await api<{ data: ConfigData }>('/admin/config')).data
       } catch {
         // Return default config if API is not available
-        return { commission_rate: 0.15, auto_confirm_hours: 4, payment_timeout_hours: 24 }
+        return { commission_rate: 0.15, auto_confirm_hours: 4, payment_timeout_hours: 24, payments_v2_enabled: false }
       }
     },
     staleTime: 600_000,
@@ -565,5 +570,73 @@ export function useUpdateConfig() {
     onError: (err: Error) => {
       toast.error(`Error: ${err.message}`)
     },
+  })
+}
+
+// ─────────────────────────── Bank transactions (reconciliation) ───────────────────────────
+
+export interface BankTransactionRow {
+  id: string
+  source: string
+  source_event_id: string | null
+  bank_brand: string | null
+  account_number: string
+  amount: number | string
+  content: string
+  reference_code: string | null
+  transfer_type: 'in' | 'out'
+  occurred_at: string
+  matched_payment_id: string | null
+  matched_order_number: string | null
+  matched_at: string | null
+  raw_payload: Record<string, unknown>
+  created_at: string
+}
+
+export function useUnmatchedBankTransactions(page = 1, limit = 20) {
+  return useQuery<{ data: BankTransactionRow[]; pagination: { total: number; page: number; limit: number; total_pages: number } }>({
+    queryKey: ['admin', 'bank-transactions', 'unmatched', page, limit],
+    queryFn: async () => {
+      return await api<{ data: BankTransactionRow[]; pagination: { total: number; page: number; limit: number; total_pages: number } }>(
+        `/admin/payments/bank-transactions/unmatched?page=${page}&limit=${limit}`,
+      )
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useMatchBankTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ bankTxId, paymentId }: { bankTxId: string; paymentId: string }) => {
+      return await api(`/admin/payments/bank-transactions/${bankTxId}/match`, {
+        method: 'POST',
+        body: JSON.stringify({ payment_id: paymentId }),
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'bank-transactions'] })
+      toast.success('Đã match giao dịch ngân hàng')
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  })
+}
+
+export function useRecordManualRefund() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      paymentId, amount, reason, proofUrl, note,
+    }: { paymentId: string; amount: number; reason: string; proofUrl?: string; note?: string }) => {
+      return await api(`/admin/payments/${paymentId}/record-manual-refund`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason, proof_url: proofUrl, note }),
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      toast.success('Đã ghi nhận refund thủ công')
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
   })
 }

@@ -9,12 +9,20 @@ export const PROVIDER_LIST_COLUMNS = 'id, display_id, business_name, address, la
 export const ROOM_COLUMNS = 'id, provider_id, name, description, capacity, price_per_night, photos, is_active, created_at, updated_at';
 export const ADDON_COLUMNS = 'id, provider_id, name, description, price, price_type, is_active, created_at, updated_at';
 
-export const ORDER_COLUMNS = 'id, order_number, owner_id, provider_id, room_type_id, status, check_in_date, check_out_date, num_nights, pet_ids, add_on_ids, special_notes, daily_status_report, price_breakdown, total_price, cancellation_policy, provider_response_deadline, cancelled_at, cancelled_by, cancellation_reason, refund_amount, completed_at, created_at, updated_at';
+export const ORDER_COLUMNS = 'id, order_number, owner_id, provider_id, room_type_id, status, check_in_date, check_out_date, num_nights, pet_ids, add_on_ids, special_notes, daily_status_report, price_breakdown, total_price, cancellation_policy, provider_response_deadline, owner_confirm_deadline, cancelled_at, cancelled_by, cancellation_reason, refund_amount, completed_at, created_at, updated_at';
 export const ORDER_LIST_COLUMNS = 'id, order_number, owner_id, provider_id, status, check_in_date, check_out_date, num_nights, total_price, created_at';
 export const ORDER_HISTORY_COLUMNS = 'id, order_id, status, actor_id, actor_type, note, created_at';
 
 export const PAYMENT_COLUMNS = 'id, order_id, method, amount, status, transaction_ref, paid_at, refunded_at, refund_amount, created_at, updated_at';
-export const PAYOUT_COLUMNS = 'id, provider_id, order_id, gross_amount, commission_rate, commission_amount, net_amount, status, payout_date, created_at, updated_at';
+export const PAYOUT_COLUMNS = 'id, provider_id, order_id, recipient, gross_amount, commission_rate, commission_amount, net_amount, status, payout_date, created_at, updated_at';
+
+export const PAYMENT_V2_COLUMNS = 'id, order_id, owner_id, provider_id, amount, currency, psp_provider, psp_order_id, psp_payment_url, method, status, captured_at, split_completed_at, created_at, updated_at';
+export const PAYOUT_V2_COLUMNS = 'id, payment_v2_id, provider_id, recipient, gross_amount, commission_rate, commission_amount, net_amount, bank_account_snapshot, psp_disbursement_id, status, failure_reason, completed_at, created_at, updated_at';
+export const ESCROW_V2_COLUMNS = 'id, payment_v2_id, type, amount, balance_after, psp_reference, description, created_at';
+export const OUTBOX_V2_COLUMNS = 'id, payment_v2_id, payout_v2_id, kind, payload, status, attempts, last_error, scheduled_at, dispatched_at, completed_at, created_at';
+
+// Provider columns with bank info (admin/owner-self views only — never use for public listing)
+export const PROVIDER_COLUMNS_ADMIN = 'id, display_id, user_id, business_name, description, license_number, license_photos, address, latitude, longitude, phone, facility_photos, certification_photos, accepted_species, weight_limit_min_kg, weight_limit_max_kg, cancellation_policy, verification_status, verification_notes, verified_at, verified_by, bank_name, bank_account_holder, bank_verified_at, bank_verified_by, rating_average, rating_count, is_active, created_at, updated_at';
 
 export const NOTIFICATION_COLUMNS = 'id, user_id, type, title, body, data, is_read, push_sent, created_at, read_at';
 export const DEVICE_TOKEN_COLUMNS = 'id, user_id, token, platform, is_active, created_at, updated_at';

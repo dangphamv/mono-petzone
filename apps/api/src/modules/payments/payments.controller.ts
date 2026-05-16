@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, Headers } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
@@ -43,11 +43,15 @@ export class PaymentsController {
 
   @Post('callback/:gateway')
   @Public()
-  @ApiOperation({ summary: 'Payment gateway webhook callback' })
+  @ApiOperation({ summary: 'Payment gateway webhook (IPN) callback' })
   @ApiResponse({ status: 200, description: 'Webhook processed', schema: { example: ok(EXAMPLE_PAYMENT_CALLBACK, 'Webhook processed') } })
   @ApiResponse({ status: 400, description: 'Invalid webhook signature', schema: { example: ERROR_400 } })
-  callback(@Param('gateway') gateway: string) {
-    return this.paymentsService.callback(gateway);
+  callback(
+    @Param('gateway') gateway: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.paymentsService.processWebhook(gateway, body ?? {}, headers ?? {});
   }
 
   @Get('payouts')
@@ -87,6 +91,54 @@ export class PaymentsController {
   @ApiResponse({ status: 404, description: 'Payment not found', schema: { example: ERROR_404 } })
   findByOrder(@CurrentUser() user: AuthUser, @Param('orderId') orderId: string) {
     return this.paymentsService.findByOrder(user.id, orderId);
+  }
+
+  @Post(':paymentId/confirm-cash')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Provider confirms cash received from owner',
+    description:
+      'For payment.method = "cash". Provider taps this at (or shortly after) check-in once owner hands over the agreed amount. Flips payment.status to completed and notifies the owner.',
+  })
+  @ApiResponse({ status: 201, description: 'Cash confirmed' })
+  @ApiResponse({ status: 400, description: 'Not a cash payment / already completed', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 403, description: 'Not the order provider', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Payment not found', schema: { example: ERROR_404 } })
+  confirmCash(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string) {
+    return this.paymentsService.confirmCashReceived(user.id, paymentId);
+  }
+
+  @Post(':paymentId/cancel')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Owner cancels a pending payment',
+    description:
+      'Allow the owner to abandon a pending MoMo redirect / VietQR QR they decided not to use. The order stays in pending_payment so they can pick a different method and retry. Only works while payment.status = "pending".',
+  })
+  @ApiResponse({ status: 201, description: 'Payment cancelled' })
+  @ApiResponse({ status: 400, description: 'Payment not pending or race lost to completion', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 403, description: 'Not the order owner', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Payment not found', schema: { example: ERROR_404 } })
+  cancelPending(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string) {
+    return this.paymentsService.cancelPending(user.id, paymentId);
+  }
+
+  @Post(':paymentId/dev-simulate-paid')
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'DEV ONLY — simulate a successful VietQR webhook',
+    description:
+      'Only enabled when DEV_SIMULATE_ENABLED=true (default off). Lets the mobile team test the full pay-and-poll flow without using SePay dashboard. Caller must own the order; payment must be method=vietqr and status=pending. Returns 403 in production.',
+  })
+  @ApiResponse({ status: 201, description: 'Simulated payment success' })
+  @ApiResponse({ status: 400, description: 'Payment not in simulatable state', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 403, description: 'Dev simulate disabled or not order owner', schema: { example: ERROR_403 } })
+  @ApiResponse({ status: 404, description: 'Payment not found', schema: { example: ERROR_404 } })
+  devSimulatePaid(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string) {
+    return this.paymentsService.devSimulateVietQRPaid(user.id, paymentId);
   }
 
   @Post(':orderId/refund')

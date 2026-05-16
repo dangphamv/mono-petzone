@@ -7,8 +7,13 @@ import { AdminActionLogService } from '../_shared/admin-action-log.service';
 
 const CONFIG_DEFAULTS = {
   commission_rate: 0.15,
+  commission_rate_v1: 0,
   auto_confirm_hours: 4,
   payment_timeout_hours: 24,
+  payments_v2_enabled: false,
+  vietqr_enabled: true,
+  momo_enabled: true,
+  cash_enabled: true,
 };
 
 @Injectable()
@@ -29,11 +34,13 @@ export class AdminConfigService {
       .select('key, value')
       .in('key', Object.keys(CONFIG_DEFAULTS));
 
-    const config = { ...CONFIG_DEFAULTS };
+    const config: Record<string, unknown> = { ...CONFIG_DEFAULTS };
     if (data) {
       for (const row of data as { key: string; value: string }[]) {
         if (row.key in config) {
-          (config as Record<string, unknown>)[row.key] = Number(row.value) || row.value;
+          const raw = row.value;
+          if (raw === 'true' || raw === 'false') config[row.key] = raw === 'true';
+          else config[row.key] = Number(raw) || raw;
         }
       }
     }

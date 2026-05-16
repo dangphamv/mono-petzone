@@ -3,6 +3,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 
@@ -15,12 +16,14 @@ import { ProvidersModule } from './modules/providers/providers.module';
 import { SearchModule } from './modules/search/search.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PaymentsV2Module } from './modules/payments-v2/payments-v2.module';
 import { CheckInModule } from './modules/check-in/check-in.module';
 import { StatusReportsModule } from './modules/status-reports/status-reports.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CallsModule } from './modules/calls/calls.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { FcmModule } from './modules/fcm/fcm.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 
@@ -37,7 +40,9 @@ import { SupabaseService } from './modules/supabase/supabase.service';
     CacheModule.register({ isGlobal: true, ttl: 300_000 }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     SupabaseModule,
+    FcmModule,
     HealthModule,
     AuthModule,
     UsersModule,
@@ -46,6 +51,7 @@ import { SupabaseService } from './modules/supabase/supabase.service';
     SearchModule,
     OrdersModule,
     PaymentsModule,
+    PaymentsV2Module,
     CheckInModule,
     StatusReportsModule,
     ChatModule,

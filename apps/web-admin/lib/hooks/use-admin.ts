@@ -568,7 +568,16 @@ export function useUpdateConfig() {
       qc.invalidateQueries({ queryKey: ['admin', 'config'] })
     },
     onError: (err: Error) => {
-      toast.error(`Error: ${err.message}`)
+      // Surface field-specific Zod errors instead of generic "Validation failed"
+      const e = err as Error & { errors?: Record<string, string[]> }
+      if (e.errors && typeof e.errors === 'object') {
+        const detail = Object.entries(e.errors)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+          .join(' | ')
+        toast.error(`${err.message} — ${detail}`)
+      } else {
+        toast.error(err.message)
+      }
     },
   })
 }

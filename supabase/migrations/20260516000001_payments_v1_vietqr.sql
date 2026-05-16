@@ -47,8 +47,10 @@ create index bank_tx_order_idx
 
 -- 3. v1 commission config (separate from v2 — v2 keeps its hardcoded rate).
 --    Trial period: 0% to attract providers/owners.
+--    Store as JSON number (not "0" string) so admin config service reads
+--    it back as a number for the z.number() validator.
 insert into public.app_config (key, value)
-values ('commission_rate_v1', '"0"'::jsonb)
+values ('commission_rate_v1', '0'::jsonb)
 on conflict (key) do nothing;
 
 -- 4. Enable VietQR by default for v1 (admin can disable via /admin/config UI)

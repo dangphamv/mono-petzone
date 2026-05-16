@@ -62,9 +62,9 @@ export default function ConfigPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // Error toast handled centrally by useUpdateConfig.onError to avoid dupes
     update.mutate(form, {
       onSuccess: () => toast.success(t('config.saved')),
-      onError: (err) => toast.error(`Lỗi: ${err.message}`),
     })
   }
 

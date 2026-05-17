@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.petzone.mobileapp",
+      "sha256_cert_fingerprints": [
+        "50:55:63:58:99:45:A7:CC:3D:24:D5:4F:A8:CF:6D:AF:2D:F1:21:3D:5E:1B:00:04:C9:65:63:F0:26:05:FC:00"
+      ]
+    }
+  }
+]

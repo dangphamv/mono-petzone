@@ -8,6 +8,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
+    pathname.startsWith('/.well-known') ||
     pathname.includes('.') // static files
   ) {
     return
@@ -34,5 +35,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|.*\\..*).*)'],
+  matcher: ['/((?!_next|api|\\.well-known|.*\\..*).*)'],
 }

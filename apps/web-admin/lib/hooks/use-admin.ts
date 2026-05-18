@@ -115,6 +115,7 @@ export function useVerifyProvider() {
     onSuccess: () => {
       toast.success('Provider verification updated')
       qc.invalidateQueries({ queryKey: ['admin', 'providers'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'provider'] })
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
     },
     onError: (err: Error) => {

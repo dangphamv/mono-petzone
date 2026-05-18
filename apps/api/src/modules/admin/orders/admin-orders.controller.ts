@@ -42,12 +42,16 @@ export class AdminOrdersController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('provider_id') providerId?: string,
+    @Query('owner_id') ownerId?: string,
   ) {
     return this.service.getOrders({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
       search,
       status,
+      providerId,
+      ownerId,
     });
   }
 

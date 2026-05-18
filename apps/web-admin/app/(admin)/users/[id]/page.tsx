@@ -19,8 +19,7 @@ import {
   Skeleton,
   Avatar, AvatarImage, AvatarFallback,
 } from '@petzone/ui'
-import { useSuspendUser, useReactivateUser, useOwnerPets, useUserDetail } from '@/lib/hooks/use-admin'
-import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
+import { useSuspendUser, useReactivateUser, useOwnerPets, useUserDetail, useOrders } from '@/lib/hooks/use-admin'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
 
@@ -57,6 +56,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const isOwner = (user?.role as string) === 'owner'
   const { data: petsResp } = useOwnerPets(isOwner ? id : undefined)
   const pets = petsResp?.data ?? []
+  const { data: ordersResp } = useOrders({ limit: 10, filters: { owner_id: [id] } })
+  const recentOrders = ordersResp?.data ?? []
   const [showModal, setShowModal] = useState(false)
   const [reason, setReason] = useState('')
   const [isPermanent, setIsPermanent] = useState(false)
@@ -214,7 +215,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <StatTile
           icon={ClipboardList}
           label={t('users.recent_orders')}
-          value={String(MOCK_RECENT_ORDERS.length)}
+          value={String(ordersResp?.meta?.total ?? recentOrders.length)}
           tone="green"
         />
         {!isOwner && (
@@ -339,7 +340,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {MOCK_RECENT_ORDERS.length === 0 ? (
+          {recentOrders.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('users.no_recent_orders')}</p>
           ) : (
             <div className="overflow-x-auto">
@@ -353,22 +354,25 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_RECENT_ORDERS.map((ord) => (
-                    <tr
-                      key={ord.id}
-                      className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50"
-                      onClick={() => router.push(`/orders/${ord.id}`)}
-                    >
-                      <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number}</td>
-                      <td className="py-2.5 pr-4">
-                        <Badge variant={ORDER_STATUS_VARIANT[ord.status] || 'default'}>
-                          {t(`status.${ord.status}` as any)}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date)}</td>
-                      <td className="py-2.5 text-right font-medium tabular-nums">{formatVND(ord.total_price)}</td>
-                    </tr>
-                  ))}
+                  {recentOrders.map((ord) => {
+                    const status = ord.status as string
+                    return (
+                      <tr
+                        key={ord.id as string}
+                        className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50"
+                        onClick={() => router.push(`/orders/${ord.id}`)}
+                      >
+                        <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number as string}</td>
+                        <td className="py-2.5 pr-4">
+                          <Badge variant={ORDER_STATUS_VARIANT[status] || 'default'}>
+                            {t(`status.${status}` as any)}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date as string)}</td>
+                        <td className="py-2.5 text-right font-medium tabular-nums">{formatVND(Number(ord.total_price) || 0)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

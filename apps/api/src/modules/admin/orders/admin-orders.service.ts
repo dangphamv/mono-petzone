@@ -16,8 +16,8 @@ export class AdminOrdersService {
     private readonly actionLog: AdminActionLogService,
   ) {}
 
-  async getOrders(params: PaginationParams & { search?: string; status?: string }) {
-    const { page = 1, limit = 20, search, status } = params;
+  async getOrders(params: PaginationParams & { search?: string; status?: string; providerId?: string; ownerId?: string }) {
+    const { page = 1, limit = 20, search, status, providerId, ownerId } = params;
     const from = (page - 1) * limit;
 
     let providerIds: string[] = [];
@@ -39,6 +39,9 @@ export class AdminOrdersService {
       .from('orders')
       .select(`${ORDER_LIST_COLUMNS}, providers(id, display_id, business_name)`, { count: 'exact' })
       .order('created_at', { ascending: false });
+
+    if (providerId) query = query.eq('provider_id', providerId);
+    if (ownerId) query = query.eq('owner_id', ownerId);
 
     if (status) {
       const values = status.split(',').map((s) => s.trim()).filter(Boolean);

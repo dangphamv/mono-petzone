@@ -160,25 +160,13 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {verificationStatus === 'pending' && (
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => setAction('approved')}
-                  disabled={!hasBankInfo}
-                  title={!hasBankInfo ? t('providers.bank.required_tooltip') : undefined}
-                >
-                  <CheckCircle2 size={14} /> {t('providers.approve')}
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => setAction('rejected')}>
-                  <XCircle size={14} /> {t('providers.reject')}
-                </Button>
-              </div>
-              {!hasBankInfo && (
-                <p className="text-xs text-amber-600 flex items-center gap-1">
-                  <AlertTriangle size={12} /> {t('providers.bank.pending')}
-                </p>
-              )}
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" onClick={() => setAction('approved')}>
+                <CheckCircle2 size={14} /> {t('providers.approve')}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setAction('rejected')}>
+                <XCircle size={14} /> {t('providers.reject')}
+              </Button>
             </div>
           )}
         </CardContent>

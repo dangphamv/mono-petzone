@@ -68,6 +68,7 @@ export interface TableQueryParams {
   limit?: number
   search?: string
   filters?: Record<string, string[]>
+  enabled?: boolean
 }
 
 function buildQuery(base: string, params: TableQueryParams = {}): string {
@@ -82,6 +83,10 @@ function buildQuery(base: string, params: TableQueryParams = {}): string {
     })
   }
   return `${base}?${qs.toString()}`
+}
+
+function pickQueryParams({ enabled: _e, ...rest }: TableQueryParams): TableQueryParams {
+  return rest
 }
 
 export function useDashboard() {
@@ -188,9 +193,11 @@ export function useUpdateProvider() {
 }
 
 export function useOrders(params: TableQueryParams = {}) {
+  const queryParams = pickQueryParams(params)
   return useQuery<PaginatedResponse<Record<string, unknown>>>({
-    queryKey: ['admin', 'orders', params],
-    queryFn: () => api(buildQuery('/admin/orders', params)),
+    queryKey: ['admin', 'orders', queryParams],
+    queryFn: () => api(buildQuery('/admin/orders', queryParams)),
+    enabled: params.enabled !== false,
   })
 }
 

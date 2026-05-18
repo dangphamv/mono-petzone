@@ -56,7 +56,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const isOwner = (user?.role as string) === 'owner'
   const { data: petsResp } = useOwnerPets(isOwner ? id : undefined)
   const pets = petsResp?.data ?? []
-  const { data: ordersResp } = useOrders({ limit: 10, filters: { owner_id: [id] } })
+  const { data: ordersResp } = useOrders({ limit: 10, filters: { owner_id: [id] }, enabled: isOwner })
   const recentOrders = ordersResp?.data ?? []
   const [showModal, setShowModal] = useState(false)
   const [reason, setReason] = useState('')
@@ -212,12 +212,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         {isOwner && (
           <StatTile icon={PawPrint} label={t('users.pet_info')} value={String(pets.length)} tone="amber" />
         )}
-        <StatTile
-          icon={ClipboardList}
-          label={t('users.recent_orders')}
-          value={String(ordersResp?.meta?.total ?? recentOrders.length)}
-          tone="green"
-        />
+        {isOwner && (
+          <StatTile
+            icon={ClipboardList}
+            label={t('users.recent_orders')}
+            value={String(ordersResp?.meta?.total ?? recentOrders.length)}
+            tone="green"
+          />
+        )}
         {!isOwner && (
           <StatTile icon={ShieldCheck} label={t('users.role')} value={role ? t((ROLE_KEY[role] || 'role.owner') as any) : t('common.not_set')} tone="amber" />
         )}
@@ -329,7 +331,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </Card>
       )}
 
-      {/* Recent orders */}
+      {/* Recent orders — only relevant for owners (their bookings as customers) */}
+      {isOwner && (
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -379,6 +382,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={showReactivate} onOpenChange={(open) => { if (!open) closeReactivate() }}>
         <DialogContent>

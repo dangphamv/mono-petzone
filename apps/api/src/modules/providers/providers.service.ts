@@ -187,15 +187,6 @@ export class ProvidersService {
       throw new BadRequestException('Provider is already approved');
     }
 
-    const { data: full } = await this.supabase.client
-      .from('providers')
-      .select('bank_name, bank_account_number_encrypted, bank_account_holder')
-      .eq('id', provider.id)
-      .single();
-    if (!full?.bank_name || !full.bank_account_number_encrypted || !full.bank_account_holder) {
-      throw new BadRequestException('Bank account info is required before submitting for verification');
-    }
-
     const { data, error } = await this.supabase.client
       .from('providers')
       .update({ verification_status: 'pending' })

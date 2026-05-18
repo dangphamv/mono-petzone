@@ -19,9 +19,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { useVerifyProvider } from '@/lib/hooks/use-admin'
+import { useVerifyProvider, useOrders } from '@/lib/hooks/use-admin'
 import { useI18n } from '@/lib/i18n'
-import { MOCK_RECENT_ORDERS } from '@/lib/mock-data'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
 
@@ -54,6 +53,8 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
     ),
   })
   const verify = useVerifyProvider()
+  const { data: ordersResp } = useOrders({ limit: 10, filters: { provider_id: [id] } })
+  const recentOrders = ordersResp?.data ?? []
   const [action, setAction] = useState<'approved' | 'rejected' | null>(null)
   const [notes, setNotes] = useState('')
   const [lightbox, setLightbox] = useState<string | null>(null)
@@ -218,7 +219,7 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
         <StatTile
           icon={ClipboardList}
           label={t('providers.recent_orders')}
-          value={String(MOCK_RECENT_ORDERS.length)}
+          value={String(ordersResp?.meta?.total ?? recentOrders.length)}
           tone="teal"
         />
         <StatTile
@@ -371,7 +372,7 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {MOCK_RECENT_ORDERS.length === 0 ? (
+          {recentOrders.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('providers.no_recent_orders')}</p>
           ) : (
             <div className="overflow-x-auto">
@@ -381,28 +382,29 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                     <th className="pb-2 pr-4 font-medium">{t('orders.order_number')}</th>
                     <th className="pb-2 pr-4 font-medium">{t('common.status')}</th>
                     <th className="pb-2 pr-4 font-medium">{t('orders.check_in')}</th>
-                    <th className="pb-2 pr-4 font-medium">{t('orders.pet_info')}</th>
                     <th className="pb-2 font-medium text-right">{t('orders.total_price')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_RECENT_ORDERS.map((ord) => (
-                    <tr
-                      key={ord.id}
-                      className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50"
-                      onClick={() => router.push(`/orders/${ord.id}`)}
-                    >
-                      <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number}</td>
-                      <td className="py-2.5 pr-4">
-                        <Badge variant={ORDER_STATUS_VARIANT[ord.status] || 'default'}>
-                          {t(`status.${ord.status}` as any)}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date)}</td>
-                      <td className="py-2.5 pr-4 first-letter:uppercase">{ord.pet_name}</td>
-                      <td className="py-2.5 text-right font-medium tabular-nums">{formatVND(ord.total_price)}</td>
-                    </tr>
-                  ))}
+                  {recentOrders.map((ord) => {
+                    const status = ord.status as string
+                    return (
+                      <tr
+                        key={ord.id as string}
+                        className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50"
+                        onClick={() => router.push(`/orders/${ord.id}`)}
+                      >
+                        <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number as string}</td>
+                        <td className="py-2.5 pr-4">
+                          <Badge variant={ORDER_STATUS_VARIANT[status] || 'default'}>
+                            {t(`status.${status}` as any)}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date as string)}</td>
+                        <td className="py-2.5 text-right font-medium tabular-nums">{formatVND(Number(ord.total_price) || 0)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

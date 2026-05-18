@@ -2,20 +2,18 @@
 
 import { use, useState } from 'react'
 import {
-  ArrowLeft, ArrowRight, Ban, ChevronDown, ChevronRight, CreditCard,
-  PawPrint, Camera, Receipt, BedDouble, XCircle, Calendar, Moon, Wallet, Users, Building2,
+  ArrowLeft, ArrowRight, Ban, ChevronDown, ChevronRight,
+  PawPrint, Receipt, BedDouble, XCircle, Calendar, Moon, Users, Building2, ShieldCheck,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
   Avatar, AvatarImage, AvatarFallback,
   Badge, Button, Card, CardContent, Skeleton, Separator,
-  Tabs, TabsList, TabsTrigger, TabsContent,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Textarea, Label,
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import { useOrderDetail, useCancelOrder } from '@/lib/hooks/use-admin'
-import { MOCK_ORDER_EXTENDED } from '@/lib/mock-data'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
 
@@ -36,7 +34,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    pet: true, price: false, photos: false, addons: false,
+    pet: true, price: false, addons: false,
   })
 
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -78,7 +76,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const provider = order.providers as Record<string, unknown> | Record<string, unknown>[] | null
   const providerObj = provider ? (Array.isArray(provider) ? provider[0] : provider) : null
-  const providerName = (providerObj?.business_name as string) || MOCK_ORDER_EXTENDED.provider_name
+  const providerName = (providerObj?.business_name as string) || '-'
   const providerDisplayId = providerObj ? displayId(providerObj, 'P') : null
   const providerAddress = providerObj?.address as string | undefined
   const providerPhone = providerObj?.phone as string | undefined
@@ -88,10 +86,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const roomName = (roomType?.name as string) || ''
 
   const pets = (order.pets as Array<Record<string, unknown>>) ?? []
+  const addOns = (order.add_ons as Array<Record<string, unknown>>) ?? []
+  const priceBreakdown = (order.price_breakdown as Record<string, unknown>) || {}
 
   const ownerInfoRaw = order.users as Record<string, unknown> | Record<string, unknown>[] | null
   const ownerInfo = ownerInfoRaw ? (Array.isArray(ownerInfoRaw) ? ownerInfoRaw[0] : ownerInfoRaw) : null
-  const ownerName = (ownerInfo?.full_name as string) || (ownerInfo?.email as string) || MOCK_ORDER_EXTENDED.owner_name
+  const ownerName = (ownerInfo?.full_name as string) || (ownerInfo?.email as string) || '-'
   const ownerDisplayId = ownerInfo ? displayId(ownerInfo, 'U') : null
   const ownerEmail = ownerInfo?.email as string | undefined
   const ownerPhone = ownerInfo?.phone as string | undefined
@@ -101,8 +101,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const statusVariant = STATUS_VARIANT[status] ?? 'default'
   const totalPrice = Number(order.total_price) || 0
   const numNights = Number(order.num_nights) || 0
-  const ext = MOCK_ORDER_EXTENDED
   const paymentVersion = Number(order.payment_version) || 1
+  const cancellationPolicy = (order.cancellation_policy as string) || '-'
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
@@ -171,13 +171,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile icon={Moon} label={t('orders.num_nights')} value={String(numNights)} tone="teal" />
         <StatTile icon={PawPrint} label={t('orders.pet_info')} value={String(pets.length)} tone="amber" />
-        <StatTile icon={Wallet} label={t('orders.payment_method')} value={ext.payment_method} tone="violet" />
-        <StatTile
-          icon={CreditCard}
-          label={t('orders.disbursement_status')}
-          value={ext.disbursement_status === 'completed' ? 'Đã giải ngân' : 'Chờ giải ngân'}
-          tone={ext.disbursement_status === 'completed' ? 'green' : 'amber'}
-        />
+        <StatTile icon={Receipt} label={t('orders.addon_services')} value={String(addOns.length)} tone="violet" />
+        <StatTile icon={ShieldCheck} label={t('orders.cancellation_policy' as any)} value={cancellationPolicy} tone="green" />
       </div>
 
       {/* Stay timeline */}
@@ -235,43 +230,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         <CollapsibleCard title={t('orders.price_breakdown')} icon={<Receipt size={16} />} open={openSections.price} onToggle={() => toggleSection('price')}>
           <dl className="space-y-2.5 text-sm">
-            <PriceRow label={t('orders.base_price')} amount={ext.price_breakdown.base_price} />
-            <PriceRow label={t('orders.addon_total')} amount={ext.price_breakdown.addon_total} />
-            <PriceRow label={t('orders.platform_fee')} amount={ext.price_breakdown.platform_fee} />
+            <PriceRow label={t('orders.base_price')} amount={Number(priceBreakdown.base_price) || 0} />
+            <PriceRow label={t('orders.addon_total')} amount={Number(priceBreakdown.addon_total) || 0} />
+            <PriceRow label={t('orders.platform_fee')} amount={Number(priceBreakdown.platform_fee) || 0} />
             <Separator />
-            <PriceRow label={t('orders.total_price')} amount={ext.price_breakdown.total} emphasize />
+            <PriceRow label={t('orders.total_price')} amount={Number(priceBreakdown.total) || totalPrice} emphasize />
           </dl>
         </CollapsibleCard>
 
         <CollapsibleCard title={t('orders.addon_services')} icon={<span className="text-sm">+</span>} open={openSections.addons} onToggle={() => toggleSection('addons')}>
-          <div className="space-y-2">
-            {ext.addon_services.map((svc, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
-                <span>{svc.name}</span>
-                <span className="font-medium tabular-nums">{formatVND(svc.price)}</span>
-              </div>
-            ))}
-          </div>
-        </CollapsibleCard>
-
-        <CollapsibleCard
-          title={`${t('orders.checkin_photos')} / ${t('orders.checkout_photos')}`}
-          icon={<Camera size={16} />}
-          open={openSections.photos}
-          onToggle={() => toggleSection('photos')}
-        >
-          <Tabs defaultValue="in">
-            <TabsList>
-              <TabsTrigger value="in">{t('orders.checkin_photos')}</TabsTrigger>
-              <TabsTrigger value="out">{t('orders.checkout_photos')}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="in" className="mt-3">
-              <PhotoGrid urls={ext.checkin_photos} />
-            </TabsContent>
-            <TabsContent value="out" className="mt-3">
-              <PhotoGrid urls={ext.checkout_photos} />
-            </TabsContent>
-          </Tabs>
+          {addOns.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('orders.no_addons' as any) || '-'}</p>
+          ) : (
+            <div className="space-y-2">
+              {addOns.map((svc, i) => (
+                <div key={(svc.id as string) || i} className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+                  <span>{svc.name as string}</span>
+                  <span className="font-medium tabular-nums">{formatVND(Number(svc.price) || 0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </CollapsibleCard>
       </div>
 
@@ -402,19 +381,6 @@ function PriceRow({ label, amount, emphasize }: { label: string; amount: number;
       <span className={`tabular-nums ${emphasize ? 'font-heading text-base font-bold text-primary' : 'font-medium'}`}>
         {formatVND(amount)}
       </span>
-    </div>
-  )
-}
-
-function PhotoGrid({ urls }: { urls: string[] }) {
-  if (!urls?.length) return <p className="text-sm text-muted-foreground">-</p>
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {urls.map((url, i) => (
-        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="group relative aspect-square overflow-hidden rounded-lg border">
-          <img src={url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-        </a>
-      ))}
     </div>
   )
 }

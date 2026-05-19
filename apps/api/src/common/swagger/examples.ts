@@ -509,12 +509,23 @@ export const EXAMPLE_CHAT_CONVERSATION = {
   id: CONVERSATION_ID,
   order_id: ORDER_ID,
   owner_id: OWNER_ID,
-  provider_id: PROVIDER_ID,
+  provider_id: PROVIDER_USER_ID,
   last_message_at: NOW,
   owner_unread_count: 0,
   provider_unread_count: 1,
   created_at: PAST,
   updated_at: NOW,
+  owner: {
+    id: OWNER_ID,
+    full_name: 'Nguyễn Văn A',
+    avatar_url: 'https://cdn.petzone.vn/avatars/owner.jpg',
+  },
+  provider: {
+    id: PROVIDER_USER_ID,
+    full_name: 'Trần Thị B',
+    avatar_url: 'https://cdn.petzone.vn/avatars/provider.jpg',
+    business_name: 'Pet Hotel Sài Gòn',
+  },
 }
 
 export const EXAMPLE_CHAT_MESSAGE = {
@@ -527,6 +538,13 @@ export const EXAMPLE_CHAT_MESSAGE = {
   status: 'read',
   created_at: NOW,
   read_at: NOW,
+  sender_role: 'owner',
+  sender: {
+    id: OWNER_ID,
+    full_name: 'Nguyễn Văn A',
+    avatar_url: 'https://cdn.petzone.vn/avatars/owner.jpg',
+    display_name: 'Nguyễn Văn A',
+  },
 }
 
 export const EXAMPLE_MARK_READ = { unread_count: 0, marked_count: 3 }

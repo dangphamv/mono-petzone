@@ -54,17 +54,59 @@ export class ChatService {
 
     const { data, error, count } = await this.supabase.client
       .from('chat_conversations')
-      .select(CHAT_CONVERSATION_COLUMNS, { count: 'exact' })
+      .select(
+        `${CHAT_CONVERSATION_COLUMNS},
+         owner:users!chat_conversations_owner_id_fkey(id, full_name, avatar_url),
+         provider:users!chat_conversations_provider_id_fkey(id, full_name, avatar_url)`,
+        { count: 'exact' }
+      )
       .or(`owner_id.eq.${userId},provider_id.eq.${userId}`)
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .range(from, from + limit - 1)
     if (error) throw new BadRequestException(error.message)
 
-    return paginate(data ?? [], count ?? 0, { page, limit })
+    const rows = data ?? []
+    const providerUserIds = Array.from(
+      new Set(rows.map((r: any) => r.provider_id).filter(Boolean))
+    )
+
+    let providerNameMap = new Map<string, string>()
+    if (providerUserIds.length > 0) {
+      const { data: providers, error: provErr } = await this.supabase.client
+        .from('providers')
+        .select('user_id, business_name')
+        .in('user_id', providerUserIds)
+      if (provErr) throw new BadRequestException(provErr.message)
+      providerNameMap = new Map(
+        (providers ?? []).map((p: any) => [p.user_id, p.business_name])
+      )
+    }
+
+    const enriched = rows.map((row: any) => {
+      const owner = Array.isArray(row.owner) ? row.owner[0] : row.owner
+      const providerUser = Array.isArray(row.provider) ? row.provider[0] : row.provider
+      const businessName = providerNameMap.get(row.provider_id) ?? null
+      return {
+        ...row,
+        owner: owner
+          ? { id: owner.id, full_name: owner.full_name, avatar_url: owner.avatar_url }
+          : null,
+        provider: providerUser
+          ? {
+              id: providerUser.id,
+              full_name: providerUser.full_name,
+              avatar_url: providerUser.avatar_url,
+              business_name: businessName,
+            }
+          : null,
+      }
+    })
+
+    return paginate(enriched, count ?? 0, { page, limit })
   }
 
   async getMessages(userId: string, conversationId: string, params: PaginationParams) {
-    await this.verifyParticipant(userId, conversationId)
+    const conversation = await this.verifyParticipant(userId, conversationId)
 
     const { page = 1, limit = 20 } = params
     const from = (page - 1) * limit
@@ -77,7 +119,50 @@ export class ChatService {
       .range(from, from + limit - 1)
     if (error) throw new BadRequestException(error.message)
 
-    return paginate(data ?? [], count ?? 0, { page, limit })
+    const rows = data ?? []
+    const [usersRes, providerRes] = await Promise.all([
+      this.supabase.client
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .in('id', [conversation.owner_id, conversation.provider_id]),
+      this.supabase.client
+        .from('providers')
+        .select('user_id, business_name')
+        .eq('user_id', conversation.provider_id)
+        .maybeSingle(),
+    ])
+    if (usersRes.error) throw new BadRequestException(usersRes.error.message)
+    if (providerRes.error) throw new BadRequestException(providerRes.error.message)
+
+    const userMap = new Map(
+      (usersRes.data ?? []).map((u: any) => [u.id, u])
+    )
+    const businessName = providerRes.data?.business_name ?? null
+
+    const enriched = rows.map((m: any) => {
+      const role: 'owner' | 'provider' =
+        m.sender_id === conversation.owner_id ? 'owner' : 'provider'
+      const user = userMap.get(m.sender_id) as any
+      const displayName =
+        role === 'provider'
+          ? businessName ?? user?.full_name ?? null
+          : user?.full_name ?? null
+      return {
+        ...m,
+        sender_role: role,
+        sender: user
+          ? {
+              id: user.id,
+              full_name: user.full_name,
+              avatar_url: user.avatar_url,
+              display_name: displayName,
+              ...(role === 'provider' ? { business_name: businessName } : {}),
+            }
+          : null,
+      }
+    })
+
+    return paginate(enriched, count ?? 0, { page, limit })
   }
 
   async sendMessage(

@@ -611,10 +611,10 @@ export interface BankTransactionRow {
 }
 
 export function useUnmatchedBankTransactions(page = 1, limit = 20) {
-  return useQuery<{ data: BankTransactionRow[]; pagination: { total: number; page: number; limit: number; total_pages: number } }>({
+  return useQuery<{ data: BankTransactionRow[]; meta: { total: number; page: number; limit: number; total_pages: number } }>({
     queryKey: ['admin', 'bank-transactions', 'unmatched', page, limit],
     queryFn: async () => {
-      return await api<{ data: BankTransactionRow[]; pagination: { total: number; page: number; limit: number; total_pages: number } }>(
+      return await api<{ data: BankTransactionRow[]; meta: { total: number; page: number; limit: number; total_pages: number } }>(
         `/admin/payments/bank-transactions/unmatched?page=${page}&limit=${limit}`,
       )
     },

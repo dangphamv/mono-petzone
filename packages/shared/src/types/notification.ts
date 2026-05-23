@@ -60,6 +60,7 @@ export const NOTIFICATION_EVENTS = {
   PAYMENT_CASH_PENDING: 'payment.cash_pending',
 
   // Order domain
+  ORDER_CREATED: 'order.created',
   ORDER_CONFIRMED: 'order.confirmed',
   ORDER_DECLINED: 'order.declined',
   ORDER_CANCELLED: 'order.cancelled',
@@ -78,6 +79,7 @@ export const NOTIFICATION_EVENT_TYPE_MAP: Record<NotificationEvent, Notification
   [NOTIFICATION_EVENTS.PAYMENT_COMPLETED]: 'payment',
   [NOTIFICATION_EVENTS.PAYMENT_FAILED]: 'payment',
   [NOTIFICATION_EVENTS.PAYMENT_CASH_PENDING]: 'payment',
+  [NOTIFICATION_EVENTS.ORDER_CREATED]: 'order_status',
   [NOTIFICATION_EVENTS.ORDER_CONFIRMED]: 'order_status',
   [NOTIFICATION_EVENTS.ORDER_DECLINED]: 'order_status',
   [NOTIFICATION_EVENTS.ORDER_CANCELLED]: 'order_status',

@@ -67,6 +67,9 @@ export const NOTIFICATION_EVENTS = {
   ORDER_CHECK_OUT: 'order.check_out',
   ORDER_COMPLETED: 'order.completed',
 
+  // Provider domain
+  PROVIDER_APPROVED: 'provider.approved',
+
   // Chat domain — re-uses existing ChatService emit name
   CHAT_NEW_MESSAGE: 'chat.message.created',
 } as const
@@ -84,6 +87,7 @@ export const NOTIFICATION_EVENT_TYPE_MAP: Record<NotificationEvent, Notification
   [NOTIFICATION_EVENTS.ORDER_CHECKED_IN]: 'order_status',
   [NOTIFICATION_EVENTS.ORDER_CHECK_OUT]: 'order_status',
   [NOTIFICATION_EVENTS.ORDER_COMPLETED]: 'reminder_review',
+  [NOTIFICATION_EVENTS.PROVIDER_APPROVED]: 'verification',
   [NOTIFICATION_EVENTS.CHAT_NEW_MESSAGE]: 'new_message',
 }
 
@@ -126,6 +130,12 @@ export interface OrderCancelledPayload extends OrderActorPayload {
 
 export interface OrderDeclinedPayload extends OrderActorPayload {
   reason?: string
+}
+
+export interface ProviderApprovedPayload {
+  provider_user_id: string
+  provider_id: string
+  business_name?: string | null
 }
 
 // ─────────────────────────── DB types ───────────────────────────

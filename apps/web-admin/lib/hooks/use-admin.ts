@@ -68,15 +68,19 @@ export interface TableQueryParams {
   limit?: number
   search?: string
   filters?: Record<string, string[]>
+  sort?: string
+  order?: 'asc' | 'desc'
   enabled?: boolean
 }
 
 function buildQuery(base: string, params: TableQueryParams = {}): string {
-  const { page = 1, limit = 20, search, filters } = params
+  const { page = 1, limit = 20, search, filters, sort, order } = params
   const qs = new URLSearchParams()
   qs.set('page', String(page))
   qs.set('limit', String(limit))
   if (search) qs.set('search', search)
+  if (sort) qs.set('sort', sort)
+  if (order) qs.set('order', order)
   if (filters) {
     Object.entries(filters).forEach(([key, values]) => {
       if (values.length) qs.set(key, values.join(','))

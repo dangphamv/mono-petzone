@@ -44,12 +44,16 @@ export class AdminProvidersController {
     @Query('limit') limit?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
+    @Query('sort') sort?: string,
+    @Query('order') order?: string,
   ) {
     return this.service.getProviders({
       page: Number(page) || 1,
       limit: Math.min(Number(limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT),
       status,
       search,
+      sort,
+      order,
     });
   }
 

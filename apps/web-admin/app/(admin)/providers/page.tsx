@@ -27,15 +27,25 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'destructive'> = {
   approved: 'success', rejected: 'destructive', pending: 'warning', suspended: 'destructive',
 }
 
+const SORT_MAP = {
+  newest: { sort: 'created_at', order: 'desc' },
+  oldest: { sort: 'created_at', order: 'asc' },
+  orders: { sort: 'order_count', order: 'desc' },
+} as const
+
 export default function ProvidersPage() {
   const { t } = useI18n()
   const router = useRouter()
   const table = useTableParams()
+  const [sortKey, setSortKey] = useState<'newest' | 'oldest' | 'orders'>('newest')
+  const sortParams = SORT_MAP[sortKey]
   const { data, isLoading } = useProviders({
     page: table.page,
     limit: table.pageSize,
     search: table.debouncedSearch,
     filters: table.filters,
+    sort: sortParams.sort,
+    order: sortParams.order,
   })
   const verify = useVerifyProvider()
   const update = useUpdateProvider()
@@ -163,17 +173,6 @@ export default function ProvidersPage() {
       cell: ({ row }) => <span className="font-medium">{row.original.business_name as string}</span>,
     },
     {
-      id: 'owner',
-      header: t('providers.owner'),
-      enableSorting: false,
-      cell: ({ row }) => {
-        const u = row.original.users as Record<string, unknown> | Record<string, unknown>[] | null
-        const user = u ? (Array.isArray(u) ? u[0] : u) : null
-        const name = (user?.full_name as string) || (user?.email as string) || '-'
-        return <span className="text-muted-foreground">{name}</span>
-      },
-    },
-    {
       accessorKey: 'address',
       header: t('providers.address'),
       enableSorting: false,
@@ -208,6 +207,26 @@ export default function ProvidersPage() {
           </span>
         )
       },
+    },
+    {
+      accessorKey: 'order_count',
+      header: t('providers.order_count'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="tabular-nums">{Number(row.original.order_count) || 0}</span>
+      ),
+    },
+    {
+      accessorKey: 'created_at',
+      header: t('common.created_at'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground tabular-nums">
+          {row.original.created_at
+            ? new Date(row.original.created_at as string).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : '-'}
+        </span>
+      ),
     },
     {
       id: 'actions',
@@ -304,12 +323,25 @@ export default function ProvidersPage() {
         emptyMessage={t('providers.empty')}
         onRowClick={(row) => router.push(`/providers/${row.id}`)}
         toolbarContent={
-          <DataTableFacetedFilter
-            title={t('common.status')}
-            options={statusOptions}
-            value={table.filters.status ?? []}
-            onChange={(v) => table.setFilter('status', v)}
-          />
+          <>
+            <DataTableFacetedFilter
+              title={t('common.status')}
+              options={statusOptions}
+              value={table.filters.status ?? []}
+              onChange={(v) => table.setFilter('status', v)}
+            />
+            <Select value={sortKey} onValueChange={(v) => { setSortKey(v as typeof sortKey); table.setPage(1) }}>
+              <SelectTrigger className="h-8 w-auto gap-1 text-xs">
+                <span className="text-muted-foreground">{t('providers.sort_label')}:</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">{t('providers.sort.newest')}</SelectItem>
+                <SelectItem value="oldest">{t('providers.sort.oldest')}</SelectItem>
+                <SelectItem value="orders">{t('providers.sort.most_orders')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
         }
       />
 

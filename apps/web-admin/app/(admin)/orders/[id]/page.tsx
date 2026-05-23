@@ -178,9 +178,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* Stay timeline */}
       <Card className="mt-6 overflow-hidden">
         <CardContent className="p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-muted-foreground">
             <BedDouble size={16} className="text-primary" />
             <span>{roomName || t('orders.no_room')}</span>
+            {pets.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                <PawPrint size={12} />
+                {t('orders.pets_staying')}: {pets.map((p) => (p.name as string) || '?').join(', ')}
+              </span>
+            )}
           </div>
           <div className="mt-4 grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
             <DatePill label={t('orders.check_in')} date={order.check_in_date as string} icon={Calendar} />

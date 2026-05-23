@@ -34,7 +34,7 @@ export default function BankTransactionsPage() {
         <CardHeader>
           <CardTitle>Giao dịch chưa khớp</CardTitle>
           <CardDescription>
-            {data ? `${data.pagination.total} giao dịch chưa khớp` : 'Đang tải...'}
+            {data ? `${data.meta.total} giao dịch chưa khớp` : 'Đang tải...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,14 +84,14 @@ export default function BankTransactionsPage() {
             </div>
           )}
 
-          {data && data.pagination.total_pages > 1 && (
+          {data && data.meta.total_pages > 1 && (
             <div className="mt-6 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Trang {page} / {data.pagination.total_pages}
+                Trang {page} / {data.meta.total_pages}
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button>
-                <Button size="sm" variant="outline" disabled={page >= data.pagination.total_pages} onClick={() => setPage(page + 1)}>Sau</Button>
+                <Button size="sm" variant="outline" disabled={page >= data.meta.total_pages} onClick={() => setPage(page + 1)}>Sau</Button>
               </div>
             </div>
           )}

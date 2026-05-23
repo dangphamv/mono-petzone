@@ -21,14 +21,19 @@ export class AdminProvidersService {
     private readonly events: EventEmitter2,
   ) {}
 
-  async getProviders(params: PaginationParams & { status?: string; search?: string }) {
-    const { page = 1, limit = 20, status, search } = params;
+  async getProviders(
+    params: PaginationParams & { status?: string; search?: string; sort?: string; order?: string },
+  ) {
+    const { page = 1, limit = 20, status, search, sort, order } = params;
     const from = (page - 1) * limit;
+
+    const sortColumn = sort === 'order_count' ? 'order_count' : 'created_at';
+    const ascending = order === 'desc' ? false : order === 'asc' ? true : sortColumn === 'created_at';
 
     let query = this.supabase.client
       .from('providers')
-      .select(`${PROVIDER_COLUMNS}, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`, { count: 'exact' })
-      .order('created_at', { ascending: true });
+      .select(`${PROVIDER_COLUMNS}, order_count, users!providers_user_id_fkey(id, display_id, email, full_name, avatar_url)`, { count: 'exact' })
+      .order(sortColumn, { ascending });
 
     if (status) {
       const values = status.split(',').map((s) => s.trim()).filter(Boolean);
@@ -123,7 +128,7 @@ export class AdminProvidersService {
       .insert({
         ...providerFields,
         user_id: userId,
-        verification_status: 'approved',
+        verification_status: 'pending',
         verified_at: new Date().toISOString(),
         verified_by: adminId,
       })

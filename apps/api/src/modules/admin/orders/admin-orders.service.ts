@@ -37,7 +37,7 @@ export class AdminOrdersService {
 
     let query = this.supabase.client
       .from('orders')
-      .select(`${ORDER_LIST_COLUMNS}, providers(id, display_id, business_name)`, { count: 'exact' })
+      .select(`${ORDER_LIST_COLUMNS}, pet_ids, providers(id, display_id, business_name)`, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (providerId) query = query.eq('provider_id', providerId);
@@ -65,7 +65,21 @@ export class AdminOrdersService {
     const { data, error, count } = await query.range(from, from + limit - 1);
     if (error) throw new BadRequestException(error.message);
 
-    return paginate(data ?? [], count ?? 0, { page, limit });
+    const orders = (data ?? []) as Array<Record<string, unknown>>;
+    const petIds = [...new Set(orders.flatMap((o) => (o.pet_ids as string[]) ?? []))];
+    let petNames = new Map<string, string>();
+    if (petIds.length) {
+      const { data: pets } = await this.supabase.client.from('pets').select('id, name').in('id', petIds);
+      petNames = new Map((pets ?? []).map((p) => [p.id as string, p.name as string]));
+    }
+    const enriched = orders.map((o) => ({
+      ...o,
+      pets: ((o.pet_ids as string[]) ?? [])
+        .map((pid) => ({ id: pid, name: petNames.get(pid) ?? null }))
+        .filter((p) => p.name),
+    }));
+
+    return paginate(enriched, count ?? 0, { page, limit });
   }
 
   async getOrderDetail(id: string) {

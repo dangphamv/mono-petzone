@@ -102,6 +102,8 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
   const ratingCount = Number(provider.rating_count) || 0
   const acceptedSpecies = (provider.accepted_species as string[]) || []
   const facilityPhotos = (provider.facility_photos as string[]) || []
+  const licensePhotos = (provider.license_photos as string[]) || []
+  const certificationPhotos = (provider.certification_photos as string[]) || []
   const coverPhoto = facilityPhotos[0]
   const weightMin = provider.weight_limit_min_kg as number | undefined
   const weightMax = provider.weight_limit_max_kg as number | undefined
@@ -174,7 +176,7 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
       </Card>
 
       {/* Bank info — required for VietQR v1 (direct-to-provider) + v2 payout */}
-      <Card className="mt-6">
+      <Card className={`mt-6 ${hasBankInfo ? '' : 'border-2 border-destructive/60 bg-destructive/5'}`}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Landmark size={16} className="text-primary" />
@@ -185,7 +187,10 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                 {bankVerifiedAt ? t('providers.bank.verified') : t('providers.bank.unverified')}
               </Badge>
             ) : (
-              <Badge variant="destructive" className="ml-auto">{t('providers.bank.missing')}</Badge>
+              <Badge variant="destructive" className="ml-auto gap-1 px-2.5 py-1 text-sm font-bold uppercase tracking-wide shadow-sm">
+                <AlertTriangle size={14} />
+                {t('providers.bank.missing')}
+              </Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -248,9 +253,13 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <p className="text-sm leading-relaxed text-foreground/80 first-letter:uppercase">
-              {(provider.description as string) || '-'}
-            </p>
+            {provider.description ? (
+              <p className="text-sm leading-relaxed text-foreground/80 first-letter:uppercase">
+                {provider.description as string}
+              </p>
+            ) : (
+              <MissingTag label={t('common.missing')} />
+            )}
 
             <Separator />
 
@@ -264,15 +273,19 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                       </Badge>
                     ))}
                   </div>
-                ) : <span className="text-sm text-muted-foreground">-</span>}
+                ) : <MissingTag label={t('common.missing')} />}
               </FieldBlock>
 
               <FieldBlock icon={FileCheck2} label={t('providers.license')}>
-                <span className="text-sm font-medium tabular-nums">{(provider.license_number as string) || '-'}</span>
+                {provider.license_number
+                  ? <span className="text-sm font-medium tabular-nums">{provider.license_number as string}</span>
+                  : <MissingTag label={t('common.missing')} />}
               </FieldBlock>
 
               <FieldBlock icon={MapPin} label={t('providers.address')}>
-                <span className="text-sm first-letter:uppercase">{(provider.address as string) || '-'}</span>
+                {provider.address
+                  ? <span className="text-sm first-letter:uppercase">{provider.address as string}</span>
+                  : <MissingTag label={t('common.missing')} />}
               </FieldBlock>
 
               <FieldBlock icon={Phone} label={t('providers.phone')}>
@@ -280,7 +293,7 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                   <a href={`tel:${provider.phone}`} className="text-sm font-medium text-primary hover:underline">
                     {provider.phone as string}
                   </a>
-                ) : <span className="text-sm text-muted-foreground">-</span>}
+                ) : <MissingTag label={t('common.missing')} />}
               </FieldBlock>
             </div>
           </CardContent>
@@ -344,22 +357,50 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {facilityPhotos.map((url, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="group relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted"
-                  onClick={() => setLightbox(url)}
-                >
-                  <img src={url} alt={`Facility ${i + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
-                </button>
-              ))}
-            </div>
+            <PhotoGrid photos={facilityPhotos} onOpen={setLightbox} altPrefix="Facility" />
           </CardContent>
         </Card>
       )}
+
+      {/* License & certification documents */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+              <FileCheck2 size={14} />
+            </span>
+            {t('providers.documents')}
+            {licensePhotos.length + certificationPhotos.length === 0 && (
+              <Badge variant="destructive" className="ml-auto">{t('common.missing')}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <FileCheck2 size={12} /> {t('providers.license_photos')}
+              <span className="text-muted-foreground/70">({licensePhotos.length})</span>
+            </p>
+            {licensePhotos.length ? (
+              <PhotoGrid photos={licensePhotos} onOpen={setLightbox} altPrefix="License" />
+            ) : (
+              <MissingTag label={t('common.missing')} />
+            )}
+          </div>
+          <Separator />
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <BadgeCheck size={12} /> {t('providers.certifications')}
+              <span className="text-muted-foreground/70">({certificationPhotos.length})</span>
+            </p>
+            {certificationPhotos.length ? (
+              <PhotoGrid photos={certificationPhotos} onOpen={setLightbox} altPrefix="Certification" />
+            ) : (
+              <MissingTag label={t('common.missing')} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent orders */}
       <Card className="mt-6">
@@ -380,8 +421,11 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 pr-4 font-medium">{t('orders.order_number')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('orders.pets_staying')}</th>
                     <th className="pb-2 pr-4 font-medium">{t('common.status')}</th>
                     <th className="pb-2 pr-4 font-medium">{t('orders.check_in')}</th>
+                    <th className="pb-2 pr-4 font-medium">{t('orders.check_out')}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t('orders.num_nights')}</th>
                     <th className="pb-2 font-medium text-right">{t('orders.total_price')}</th>
                   </tr>
                 </thead>
@@ -395,12 +439,20 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
                         onClick={() => router.push(`/orders/${ord.id}`)}
                       >
                         <td className="py-2.5 pr-4 font-mono text-xs">{ord.order_number as string}</td>
+                        <td className="py-2.5 pr-4 first-letter:uppercase">
+                          {(() => {
+                            const names = ((ord.pets as Array<{ name?: string }>) ?? []).map((p) => p.name).filter(Boolean)
+                            return names.length ? names.join(', ') : <span className="text-muted-foreground">-</span>
+                          })()}
+                        </td>
                         <td className="py-2.5 pr-4">
                           <Badge variant={ORDER_STATUS_VARIANT[status] || 'default'}>
                             {t(`status.${status}` as any)}
                           </Badge>
                         </td>
                         <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_in_date as string)}</td>
+                        <td className="py-2.5 pr-4 text-muted-foreground">{formatDate(ord.check_out_date as string)}</td>
+                        <td className="py-2.5 pr-4 text-right tabular-nums text-muted-foreground">{Number(ord.num_nights) || 0}</td>
                         <td className="py-2.5 text-right font-medium tabular-nums">{formatVND(Number(ord.total_price) || 0)}</td>
                       </tr>
                     )
@@ -475,6 +527,33 @@ function FieldBlock({ icon: Icon, label, children }: {
         {label}
       </p>
       <div className="mt-1.5">{children}</div>
+    </div>
+  )
+}
+
+function MissingTag({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+      <AlertTriangle size={12} />
+      {label}
+    </span>
+  )
+}
+
+function PhotoGrid({ photos, onOpen, altPrefix }: { photos: string[]; onOpen: (url: string) => void; altPrefix: string }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      {photos.map((url, i) => (
+        <button
+          key={i}
+          type="button"
+          className="group relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted"
+          onClick={() => onOpen(url)}
+        >
+          <img src={url} alt={`${altPrefix} ${i + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+          <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
+        </button>
+      ))}
     </div>
   )
 }

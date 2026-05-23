@@ -192,6 +192,12 @@ export class OrdersService {
       actor_type: 'owner',
     });
 
+    this.events.emit(NOTIFICATION_EVENTS.ORDER_CREATED, {
+      owner_id: userId,
+      order_id: order.id,
+      order_number: (order as { order_number?: string }).order_number ?? '',
+    });
+
     return order;
   }
 

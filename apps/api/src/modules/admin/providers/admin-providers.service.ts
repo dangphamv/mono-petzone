@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
+import { NOTIFICATION_EVENTS } from '@petzone/shared';
 import type {
   VerifyProviderInput,
   AdminUpdateProviderInput,
@@ -16,6 +18,7 @@ export class AdminProvidersService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly actionLog: AdminActionLogService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async getProviders(params: PaginationParams & { status?: string; search?: string }) {
@@ -226,6 +229,14 @@ export class AdminProvidersService {
       status: body.status,
       notes: body.notes,
     });
+
+    if (body.status === 'approved' && data.user_id) {
+      this.events.emit(NOTIFICATION_EVENTS.PROVIDER_APPROVED, {
+        provider_user_id: data.user_id,
+        provider_id: data.id,
+        business_name: data.business_name,
+      });
+    }
 
     return data;
   }

@@ -8,6 +8,7 @@ import type {
   OrderActorPayload,
   OrderCancelledPayload,
   OrderDeclinedPayload,
+  ProviderApprovedPayload,
 } from '@petzone/shared';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from './notifications.service';
@@ -196,6 +197,22 @@ export class NotificationsListener {
         order_id: payload.order_id,
         order_number: payload.order_number,
         event: NOTIFICATION_EVENTS.ORDER_COMPLETED,
+      },
+    });
+  }
+
+  // ─────────────────────────── Provider events ───────────────────────────
+
+  @OnEvent(NOTIFICATION_EVENTS.PROVIDER_APPROVED, { async: true })
+  async onProviderApproved(payload: ProviderApprovedPayload) {
+    await this.notifications.sendToUser(payload.provider_user_id, {
+      type: 'verification',
+      title: 'Hồ sơ đã được duyệt 🎉',
+      body: `Chúc mừng! ${payload.business_name ?? 'Hồ sơ của bạn'} đã được duyệt. Bạn có thể bắt đầu nhận đặt phòng.`,
+      clickAction: 'petzone://provider-dashboard',
+      data: {
+        provider_id: payload.provider_id,
+        event: NOTIFICATION_EVENTS.PROVIDER_APPROVED,
       },
     });
   }

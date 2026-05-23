@@ -102,21 +102,6 @@ export class NotificationsListener {
 
   // ─────────────────────────── Order events ───────────────────────────
 
-  @OnEvent(NOTIFICATION_EVENTS.ORDER_CREATED, { async: true })
-  async onOrderCreated(payload: OrderActorPayload) {
-    await this.notifications.sendToUser(payload.owner_id, {
-      type: 'order_status',
-      title: 'Đặt phòng thành công 🎉',
-      body: `Đơn ${payload.order_number} đã được tạo. Vui lòng hoàn tất thanh toán để giữ chỗ.`,
-      clickAction: `petzone://orders/${payload.order_id}`,
-      data: {
-        order_id: payload.order_id,
-        order_number: payload.order_number,
-        event: NOTIFICATION_EVENTS.ORDER_CREATED,
-      },
-    });
-  }
-
   @OnEvent(NOTIFICATION_EVENTS.ORDER_CONFIRMED, { async: true })
   async onOrderConfirmed(payload: OrderActorPayload) {
     await this.notifications.sendToUser(payload.owner_id, {

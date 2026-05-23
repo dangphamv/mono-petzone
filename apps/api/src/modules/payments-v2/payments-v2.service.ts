@@ -8,7 +8,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { COMMISSION_RATE } from '@petzone/shared';
+import { COMMISSION_RATE, NOTIFICATION_EVENTS } from '@petzone/shared';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ORDER_COLUMNS, PAYMENT_V2_COLUMNS, PAYOUT_V2_COLUMNS } from '../../common/constants/columns';
 import { PAYMENT_PROVIDER, type PaymentProvider, type ParsedWebhookEvent } from './psp/psp.interface';
@@ -252,6 +252,24 @@ export class PaymentsV2Service {
       actor_id: payment.owner_id,
       actor_type: 'system',
       note: `v2 payment captured at PSP (${this.psp.name}). Awaiting provider confirmation.`,
+    });
+
+    // Notify owner (receipt) + provider (new paid order to confirm/decline).
+    // Reuses the same PAYMENT_COMPLETED handler as the v1 online flow.
+    const { data: orderRow } = await this.db
+      .from('orders')
+      .select('order_number, providers(user_id)')
+      .eq('id', payment.order_id)
+      .single();
+    const providerInner = Array.isArray(orderRow?.providers) ? orderRow.providers[0] : orderRow?.providers;
+
+    this.events.emit(NOTIFICATION_EVENTS.PAYMENT_COMPLETED, {
+      owner_id: payment.owner_id,
+      provider_user_id: providerInner?.user_id,
+      order_id: payment.order_id,
+      order_number: orderRow?.order_number ?? '',
+      amount: Number(payment.amount),
+      gateway: this.psp.name,
     });
   }
 

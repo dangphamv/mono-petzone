@@ -1,6 +1,9 @@
 -- Custom password-reset tokens (SendGrid flow). We store only a SHA-256 hash of the
 -- raw token; the raw token is emailed once and never persisted. Single-use + expiring.
-create table public.password_reset_tokens (
+-- Idempotent: the table may already exist (created via `supabase db push`) while the app's
+-- own _migrations tracker hasn't recorded this file yet, so the deploy-time migrate runner
+-- re-runs it. Without IF NOT EXISTS the CREATE fails and the API container never starts.
+create table if not exists public.password_reset_tokens (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
   token_hash text not null unique,
@@ -9,8 +12,8 @@ create table public.password_reset_tokens (
   created_at timestamptz not null default now()
 );
 
-create index password_reset_tokens_hash_idx on public.password_reset_tokens(token_hash);
-create index password_reset_tokens_user_idx on public.password_reset_tokens(user_id);
+create index if not exists password_reset_tokens_hash_idx on public.password_reset_tokens(token_hash);
+create index if not exists password_reset_tokens_user_idx on public.password_reset_tokens(user_id);
 
 -- Service-role only (API). No policies → no anon/authenticated access; service role bypasses RLS.
 alter table public.password_reset_tokens enable row level security;

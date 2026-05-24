@@ -19,6 +19,9 @@ export class SearchProvidersDto {
   @ApiPropertyOptional({ example: 'dog', description: 'Filter by pet species', enum: ['dog', 'cat', 'other'] })
   species?: 'dog' | 'cat' | 'other';
 
+  @ApiPropertyOptional({ example: 'Happy Paws', description: 'Filter by business name (case-insensitive partial match)' })
+  keyword?: string;
+
   @ApiPropertyOptional({ example: 100000, description: 'Minimum price per night in VND' })
   min_price?: number;
 

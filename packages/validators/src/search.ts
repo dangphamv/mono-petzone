@@ -7,6 +7,7 @@ export const searchProvidersSchema = z.object({
   check_in_date: z.string().optional(),
   check_out_date: z.string().optional(),
   species: z.enum(['dog', 'cat', 'other']).optional(),
+  keyword: z.string().trim().min(1).max(100).optional(),
   min_price: z.number().positive().optional(),
   max_price: z.number().positive().optional(),
   min_rating: z.number().min(1).max(5).optional(),

@@ -9,10 +9,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { PROVIDER_LIST_COLUMNS, FAVORITE_COLUMNS, SEARCH_HISTORY_COLUMNS } from '../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../common/utils/pagination';
 
-export interface ProviderRow {
-  room_types?: { price_per_night: number; is_active: boolean }[];
-}
-
 @Injectable()
 export class SearchService {
   constructor(private readonly supabase: SupabaseService) {}
@@ -21,60 +17,36 @@ export class SearchService {
     const { page = 1, limit = 20 } = query;
     const from = (page - 1) * limit;
 
-    let q = this.supabase.client
-      .from('providers')
-      .select(`${PROVIDER_LIST_COLUMNS}, room_types(id, price_per_night, is_active)`, { count: 'exact' })
-      .eq('verification_status', 'approved')
-      .eq('is_active', true);
-
-    if (query.species) {
-      q = q.contains('accepted_species', [query.species]);
-    }
-    if (query.min_rating) {
-      q = q.gte('rating_average', query.min_rating);
-    }
-
-    if (query.sort_by === 'rating') {
-      q = q.order('rating_average', { ascending: false });
-    } else if (query.sort_by === 'price_asc') {
-      q = q.order('created_at', { ascending: true });
-    } else if (query.sort_by === 'price_desc') {
-      q = q.order('created_at', { ascending: false });
-    } else {
-      q = q.order('rating_average', { ascending: false });
-    }
-
-    q = q.range(from, from + limit - 1);
-
-    const { data, error, count } = await q;
+    const { data, error } = await this.supabase.client.rpc('search_providers_nearby', {
+      p_latitude: query.latitude ?? null,
+      p_longitude: query.longitude ?? null,
+      p_radius_km: query.radius_km,
+      p_species: query.species ?? null,
+      p_min_rating: query.min_rating ?? null,
+      p_min_price: query.min_price ?? null,
+      p_max_price: query.max_price ?? null,
+      p_keyword: query.keyword ?? null,
+      p_sort_by: query.sort_by,
+      p_limit: limit,
+      p_offset: from,
+    });
 
     if (error) throw new BadRequestException(error.message);
 
-    let results = (data ?? []) as ProviderRow[];
-
-    if (query.min_price || query.max_price) {
-      results = results.filter((p) => {
-        const rooms = p.room_types?.filter((r) => r.is_active) ?? [];
-        if (rooms.length === 0) return false;
-        const minRoomPrice = Math.min(...rooms.map((r) => r.price_per_night));
-        if (query.min_price && minRoomPrice < query.min_price) return false;
-        if (query.max_price && minRoomPrice > query.max_price) return false;
-        return true;
-      });
-    }
+    const { results = [], total = 0 } = (data ?? {}) as { results?: unknown[]; total?: number };
 
     if (userId && query.latitude && query.longitude) {
       this.saveSearchHistory(userId, query).catch(() => {});
     }
 
-    return paginate(results, count ?? 0, { page, limit });
+    return paginate(results, total, { page, limit });
   }
 
   private async saveSearchHistory(userId: string, query: SearchProvidersInput) {
     const { latitude, longitude, page, limit, sort_by, ...filters } = query;
     await this.supabase.client.from('search_history').insert({
       user_id: userId,
-      query_text: query.species || '',
+      query_text: query.keyword || query.species || '',
       latitude: latitude ?? null,
       longitude: longitude ?? null,
       filters,

@@ -2,7 +2,6 @@ import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/commo
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PAGINATION } from '@petzone/shared';
 import { searchProvidersSchema } from '@petzone/validators';
-import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodQueryValidationPipe } from '../../common/pipes/zod-query-validation.pipe';
 import type { AuthUser } from '../../common/interfaces/auth-user';
@@ -26,15 +25,16 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get('providers')
-  @Public()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Search providers with filters' })
   @ApiResponse({ status: 200, description: 'Search results returned', schema: { example: okPaginated([EXAMPLE_PROVIDER_LIST_ITEM], 'Search results returned', 12) } })
   @ApiResponse({ status: 400, description: 'Invalid search parameters', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
   searchProviders(
     @Query(new ZodQueryValidationPipe(searchProvidersSchema)) query: SearchProvidersDto,
-    @CurrentUser() user: AuthUser | undefined,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.searchService.searchProviders(query, user?.id);
+    return this.searchService.searchProviders(query, user.id);
   }
 
   @Post('favorites')

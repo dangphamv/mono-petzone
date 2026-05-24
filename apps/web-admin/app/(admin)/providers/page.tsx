@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Pencil, Ban, Plus, Search, X, Check } from 'lucide-react'
+import { Building2, Pencil, Ban, Plus, Search, X, Check, MoreHorizontal, Eye } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   Button, Badge, Input, Label, Skeleton,
@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Textarea,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import {
@@ -233,57 +234,64 @@ export default function ProvidersPage() {
     },
     {
       id: 'actions',
-      size: 260,
+      size: 80,
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
-        if (!canManage) return null
         const status = row.original.verification_status as string
         return (
-          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {status === 'pending' && (
-              <>
-                <Button size="sm" onClick={() => { setSelected(row.original); setAction('approved') }}>
-                  {t('providers.approve')}
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t('common.actions')}>
+                  <MoreHorizontal size={16} />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => { setSelected(row.original); setAction('rejected') }}
-                >
-                  {t('providers.reject')}
-                </Button>
-              </>
-            )}
-            {status === 'approved' && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1 text-destructive hover:text-destructive"
-                onClick={() => { setSelected(row.original); setAction('suspended') }}
-              >
-                <Ban size={12} />
-                {t('providers.suspend')}
-              </Button>
-            )}
-            {status === 'suspended' && (
-              <Button
-                size="sm"
-                onClick={() => { setSelected(row.original); setAction('approved') }}
-              >
-                {t('providers.approve')}
-              </Button>
-            )}
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => setEditing(row.original)}>
-              <Pencil size={12} />
-              {t('common.edit')}
-            </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={() => router.push(`/providers/${row.original.id}`)}>
+                  <Eye size={14} className="mr-2" />
+                  {t('common.view_detail')}
+                </DropdownMenuItem>
+                {canManage && (status === 'pending' || status === 'suspended') && (
+                  <DropdownMenuItem onSelect={() => { setSelected(row.original); setAction('approved') }}>
+                    <Check size={14} className="mr-2" />
+                    {t('providers.approve')}
+                  </DropdownMenuItem>
+                )}
+                {canManage && status === 'pending' && (
+                  <DropdownMenuItem
+                    onSelect={() => { setSelected(row.original); setAction('rejected') }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <X size={14} className="mr-2" />
+                    {t('providers.reject')}
+                  </DropdownMenuItem>
+                )}
+                {canManage && status === 'approved' && (
+                  <DropdownMenuItem
+                    onSelect={() => { setSelected(row.original); setAction('suspended') }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Ban size={14} className="mr-2" />
+                    {t('providers.suspend')}
+                  </DropdownMenuItem>
+                )}
+                {canManage && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setEditing(row.original)}>
+                      <Pencil size={14} className="mr-2" />
+                      {t('common.edit')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )
       },
     },
-  ], [t, canManage])
+  ], [t, canManage, router])
 
   const statusOptions = useMemo(() => [
     { label: t('status.pending'), value: 'pending' },

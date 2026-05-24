@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { PAGINATION } from '@petzone/shared';
 import { moderateReviewSchema } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
@@ -27,6 +28,7 @@ export class AdminReviewsController {
   constructor(private readonly service: AdminReviewsService) {}
 
   @Get('reviews/flagged')
+  @StaffAccess('reviews:view')
   @ApiOperation({ summary: 'List flagged reviews' })
   @ApiResponse({ status: 200, description: 'Flagged reviews returned', schema: { example: okPaginated([EXAMPLE_REVIEW], 'Flagged reviews returned', 7) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -39,6 +41,7 @@ export class AdminReviewsController {
   }
 
   @Patch('reviews/:id/moderate')
+  @StaffAccess('reviews:manage')
   @ApiOperation({ summary: 'Moderate a review' })
   @ApiResponse({ status: 200, description: 'Review moderated', schema: { example: ok(EXAMPLE_MODERATE_REVIEW_RESULT, 'Review moderated') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })

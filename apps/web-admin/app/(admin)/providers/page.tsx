@@ -16,6 +16,7 @@ import {
   useProviders, useVerifyProvider, useUpdateProvider, useCreateProvider, useUsers,
   type UpdateProviderBody, type CreateProviderBody,
 } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
@@ -37,6 +38,8 @@ export default function ProvidersPage() {
   const { t } = useI18n()
   const router = useRouter()
   const table = useTableParams()
+  const me = useCurrentUser()
+  const canManage = me?.can('providers:manage') ?? false
   const [sortKey, setSortKey] = useState<'newest' | 'oldest' | 'orders'>('newest')
   const sortParams = SORT_MAP[sortKey]
   const { data, isLoading } = useProviders({
@@ -234,6 +237,7 @@ export default function ProvidersPage() {
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
+        if (!canManage) return null
         const status = row.original.verification_status as string
         return (
           <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -279,7 +283,7 @@ export default function ProvidersPage() {
         )
       },
     },
-  ], [t])
+  ], [t, canManage])
 
   const statusOptions = useMemo(() => [
     { label: t('status.pending'), value: 'pending' },
@@ -300,10 +304,12 @@ export default function ProvidersPage() {
             <p className="page-description">{t('providers.subtitle')}</p>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-1">
-          <Plus size={16} />
-          {t('providers.create')}
-        </Button>
+        {canManage && (
+          <Button onClick={openCreate} className="gap-1">
+            <Plus size={16} />
+            {t('providers.create')}
+          </Button>
+        )}
       </div>
 
       <DataTable

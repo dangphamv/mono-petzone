@@ -6,6 +6,9 @@ interface CurrentUser {
   id: string
   email: string
   role: string
+  permissions: string[]
+  /** admin = superuser (true for any permission); staff = checks granted permissions. */
+  can: (perm: string) => boolean
 }
 
 function getToken(): string | null {
@@ -33,10 +36,15 @@ export function useCurrentUser(): CurrentUser | null {
     if (!token) return
     const payload = decodeJwtPayload(token)
     if (!payload) return
+    const appMeta = (payload.app_metadata as Record<string, unknown>) ?? {}
+    const role = (appMeta.role as string) || 'admin'
+    const permissions = Array.isArray(appMeta.permissions) ? (appMeta.permissions as string[]) : []
     setUser({
       id: (payload.sub as string) || '',
       email: (payload.email as string) || '',
-      role: (payload.app_metadata as Record<string, unknown>)?.role as string || 'admin',
+      role,
+      permissions,
+      can: (perm: string) => role === 'admin' || permissions.includes(perm),
     })
   }, [])
 

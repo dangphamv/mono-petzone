@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
 import { AdminDashboardService } from './admin-dashboard.service';
@@ -20,6 +21,7 @@ export class AdminDashboardController {
   constructor(private readonly service: AdminDashboardService) {}
 
   @Get('dashboard')
+  @StaffAccess('dashboard:view')
   @ApiOperation({ summary: 'Get admin dashboard overview' })
   @ApiResponse({ status: 200, description: 'Dashboard data returned', schema: { example: ok(EXAMPLE_ADMIN_DASHBOARD) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -29,6 +31,7 @@ export class AdminDashboardController {
   }
 
   @Get('analytics')
+  @StaffAccess('dashboard:view')
   @ApiOperation({ summary: 'Get platform analytics (lifetime or filtered by month YYYY-MM)' })
   @ApiResponse({ status: 200, description: 'Analytics data returned', schema: { example: ok(EXAMPLE_ADMIN_ANALYTICS) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })

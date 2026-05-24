@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import type { SuspendUserInput } from '@petzone/validators';
+import type { SuspendUserInput, AdminCreateAccountInput } from '@petzone/validators';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { USER_COLUMNS } from '../../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../../common/utils/pagination';
@@ -11,6 +11,77 @@ export class AdminUsersService {
     private readonly supabase: SupabaseService,
     private readonly actionLog: AdminActionLogService,
   ) {}
+
+  async createAccount(adminId: string, body: AdminCreateAccountInput) {
+    const email = body.email.toLowerCase();
+    const permissions = body.role === 'staff' ? body.permissions : [];
+
+    const { data: existing } = await this.supabase.client
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+    if (existing) throw new BadRequestException('A user with this email already exists');
+
+    const { data: authData, error: authError } = await this.supabase.client.auth.admin.createUser({
+      email,
+      password: body.password,
+      email_confirm: true,
+      app_metadata: { role: body.role, permissions },
+    });
+    if (authError || !authData?.user) {
+      throw new BadRequestException(authError?.message || 'Failed to create auth user');
+    }
+
+    const { data: inserted, error: insertError } = await this.supabase.client
+      .from('users')
+      .insert({ id: authData.user.id, email, full_name: body.full_name, role: body.role, permissions })
+      .select(USER_COLUMNS)
+      .single();
+    if (insertError) {
+      // Roll back the auth user so we don't orphan it.
+      await this.supabase.client.auth.admin.deleteUser(authData.user.id).catch(() => undefined);
+      throw new BadRequestException(insertError.message);
+    }
+
+    await this.actionLog.log(adminId, 'create_account', 'user', authData.user.id, {
+      email,
+      full_name: body.full_name,
+      role: body.role,
+      permissions,
+    });
+
+    return inserted;
+  }
+
+  async updateStaffPermissions(adminId: string, userId: string, permissions: string[]) {
+    const { data: target } = await this.supabase.client
+      .from('users')
+      .select('id, role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (!target) throw new NotFoundException('User not found');
+    if ((target as { role: string }).role !== 'staff') {
+      throw new BadRequestException('Only staff accounts have editable permissions');
+    }
+
+    // app_metadata feeds the JWT the guard reads — set role+permissions together.
+    await this.supabase.client.auth.admin.updateUserById(userId, {
+      app_metadata: { role: 'staff', permissions },
+    });
+
+    const { data: updated, error } = await this.supabase.client
+      .from('users')
+      .update({ permissions, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select(USER_COLUMNS)
+      .single();
+    if (error) throw new BadRequestException(error.message);
+
+    await this.actionLog.log(adminId, 'update_staff_permissions', 'user', userId, { permissions });
+
+    return updated;
+  }
 
   async getUsers(params: PaginationParams & { role?: string; search?: string }) {
     const { page = 1, limit = 20, role, search } = params;

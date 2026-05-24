@@ -9,6 +9,7 @@ import {
 } from '@petzone/validators';
 import type { AdminUpdateProviderInput, AdminCreateProviderInput } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
@@ -35,6 +36,7 @@ export class AdminProvidersController {
   constructor(private readonly service: AdminProvidersService) {}
 
   @Get('providers')
+  @StaffAccess('providers:view')
   @ApiOperation({ summary: 'List all providers for admin review' })
   @ApiResponse({ status: 200, description: 'Providers list returned', schema: { example: okPaginated([EXAMPLE_PROVIDER], 'Providers list returned', 320) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -58,6 +60,7 @@ export class AdminProvidersController {
   }
 
   @Post('providers')
+  @StaffAccess('providers:manage')
   @ApiOperation({ summary: 'Create a provider profile for a user (admin)' })
   @ApiResponse({ status: 201, description: 'Provider created', schema: { example: ok(EXAMPLE_PROVIDER, 'Provider created') } })
   @ApiResponse({ status: 400, description: 'Validation error or user already has provider profile', schema: { example: ERROR_400 } })
@@ -72,6 +75,7 @@ export class AdminProvidersController {
   }
 
   @Get('providers/:id/rooms')
+  @StaffAccess('providers:view')
   @ApiOperation({ summary: 'List active room types for a provider' })
   @ApiResponse({ status: 200, description: 'Rooms returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -81,6 +85,7 @@ export class AdminProvidersController {
   }
 
   @Get('providers/:id/addons')
+  @StaffAccess('providers:view')
   @ApiOperation({ summary: 'List active add-on services for a provider' })
   @ApiResponse({ status: 200, description: 'Add-ons returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -90,6 +95,7 @@ export class AdminProvidersController {
   }
 
   @Get('providers/:id')
+  @StaffAccess('providers:view')
   @ApiOperation({ summary: 'Get provider detail with verification history' })
   @ApiResponse({ status: 200, description: 'Provider detail returned', schema: { example: ok(EXAMPLE_PROVIDER_DETAIL) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -100,6 +106,7 @@ export class AdminProvidersController {
   }
 
   @Patch('providers/:id/verify')
+  @StaffAccess('providers:manage')
   @ApiOperation({ summary: 'Verify or reject a provider' })
   @ApiResponse({ status: 200, description: 'Provider verification updated', schema: { example: ok(EXAMPLE_VERIFY_PROVIDER_RESULT, 'Provider verification updated') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
@@ -111,6 +118,7 @@ export class AdminProvidersController {
   }
 
   @Patch('providers/:id')
+  @StaffAccess('providers:manage')
   @ApiOperation({ summary: 'Update provider basic info (admin)' })
   @ApiResponse({ status: 200, description: 'Provider updated', schema: { example: ok(EXAMPLE_PROVIDER, 'Provider updated') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
@@ -126,6 +134,7 @@ export class AdminProvidersController {
   }
 
   @Post('providers/:id/request-info')
+  @StaffAccess('providers:manage')
   @ApiOperation({ summary: 'Request additional info from provider' })
   @ApiResponse({ status: 201, description: 'Info request sent to provider', schema: { example: ok(EXAMPLE_REQUEST_INFO_RESULT, 'Info request sent to provider') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })

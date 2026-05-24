@@ -1,4 +1,4 @@
-export const USER_COLUMNS = 'id, display_id, phone, email, full_name, avatar_url, role, status, social_provider, social_id, notification_preferences, terms_accepted_at, last_login_at, created_at, updated_at';
+export const USER_COLUMNS = 'id, display_id, phone, email, full_name, avatar_url, role, permissions, status, social_provider, social_id, notification_preferences, terms_accepted_at, last_login_at, created_at, updated_at';
 export const USER_PUBLIC_COLUMNS = 'id, display_id, full_name, avatar_url, role';
 
 export const PET_COLUMNS = 'id, display_id, owner_id, name, species, breed, gender, date_of_birth, weight_kg, color, photos, vaccination_records, allergies, chronic_conditions, current_medications, is_neutered, temperament, sociable_with_others, special_needs_notes, emergency_vet_name, emergency_vet_phone, is_active, created_at, updated_at';

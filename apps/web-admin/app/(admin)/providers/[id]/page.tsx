@@ -20,6 +20,7 @@ import {
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useVerifyProvider, useOrders } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useI18n } from '@/lib/i18n'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
@@ -53,6 +54,8 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
     ),
   })
   const verify = useVerifyProvider()
+  const me = useCurrentUser()
+  const canManage = me?.can('providers:manage') ?? false
   const { data: ordersResp } = useOrders({ limit: 10, filters: { provider_id: [id] } })
   const recentOrders = ordersResp?.data ?? []
   const [action, setAction] = useState<'approved' | 'rejected' | null>(null)
@@ -162,7 +165,7 @@ export default function ProviderDetailPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {verificationStatus === 'pending' && (
+          {verificationStatus === 'pending' && canManage && (
             <div className="flex shrink-0 gap-2">
               <Button size="sm" onClick={() => setAction('approved')}>
                 <CheckCircle2 size={14} /> {t('providers.approve')}

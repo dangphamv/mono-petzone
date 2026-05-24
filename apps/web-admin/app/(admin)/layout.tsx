@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
+import { RouteGuard } from '@/components/layout/route-guard'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +8,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <Sidebar />
       <main className="ml-[260px] flex-1">
         <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
-          <Suspense>{children}</Suspense>
+          <Suspense>
+            <RouteGuard>{children}</RouteGuard>
+          </Suspense>
         </div>
       </main>
     </div>

@@ -1,4 +1,13 @@
-export type UserRole = 'owner' | 'provider' | 'admin'
+export type UserRole = 'owner' | 'provider' | 'admin' | 'staff'
+
+export type AdminPermission =
+  | 'orders:view' | 'orders:manage'
+  | 'providers:view' | 'providers:manage'
+  | 'disputes:view' | 'disputes:manage'
+  | 'reviews:view' | 'reviews:manage'
+  | 'users:view' | 'users:manage'
+  | 'pets:view' | 'pets:manage'
+  | 'dashboard:view'
 
 export type UserStatus = 'active' | 'suspended' | 'banned' | 'pending_verification'
 

@@ -8,6 +8,7 @@ import {
 } from '@petzone/validators';
 import type { CancelOrderInput } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
@@ -33,6 +34,7 @@ export class AdminOrdersController {
   constructor(private readonly service: AdminOrdersService) {}
 
   @Get('orders')
+  @StaffAccess('orders:view')
   @ApiOperation({ summary: 'List all orders' })
   @ApiResponse({ status: 200, description: 'Orders list returned', schema: { example: okPaginated([EXAMPLE_ORDER_LIST_ITEM], 'Orders list returned', 2017) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -56,6 +58,7 @@ export class AdminOrdersController {
   }
 
   @Post('orders')
+  @StaffAccess('orders:manage')
   @ApiOperation({ summary: 'Create a booking order on behalf of an owner' })
   @ApiResponse({ status: 201, description: 'Order created' })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
@@ -67,6 +70,7 @@ export class AdminOrdersController {
   }
 
   @Patch('orders/:id/cancel')
+  @StaffAccess('orders:manage')
   @ApiOperation({ summary: 'Cancel an order (admin override)' })
   @ApiResponse({ status: 200, description: 'Order cancelled' })
   @ApiResponse({ status: 400, description: 'Validation error or order not cancellable', schema: { example: ERROR_400 } })
@@ -78,6 +82,7 @@ export class AdminOrdersController {
   }
 
   @Get('orders/export')
+  @StaffAccess('orders:view')
   @ApiOperation({ summary: 'Export orders as CSV' })
   @ApiResponse({ status: 200, description: 'CSV file returned', schema: { example: ok(EXAMPLE_EXPORT_ORDERS, 'Export ready') } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -87,6 +92,7 @@ export class AdminOrdersController {
   }
 
   @Get('orders/:id')
+  @StaffAccess('orders:view')
   @ApiOperation({ summary: 'Get order detail with room, pets, and add-ons' })
   @ApiResponse({ status: 200, description: 'Order detail returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -97,6 +103,7 @@ export class AdminOrdersController {
   }
 
   @Post('orders/:id/message')
+  @StaffAccess('orders:manage')
   @ApiOperation({ summary: 'Send mediation message to both parties' })
   @ApiResponse({ status: 201, description: 'Message sent to both parties', schema: { example: ok(EXAMPLE_ADMIN_MESSAGE_RESULT, 'Message sent to both parties') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })

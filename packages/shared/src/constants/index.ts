@@ -1,8 +1,35 @@
 import type { OrderStatus, PaymentMethod, CancellationPolicy } from '../types'
-import type { UserRole } from '../types/user'
+import type { UserRole, AdminPermission } from '../types/user'
 import type { PetSpecies } from '../types/pet'
 
-export const USER_ROLES: UserRole[] = ['owner', 'provider', 'admin']
+export const USER_ROLES: UserRole[] = ['owner', 'provider', 'admin', 'staff']
+
+/** Granular admin-dashboard permissions assignable to staff accounts (admin = superuser, ignores these). */
+export const ADMIN_PERMISSIONS: AdminPermission[] = [
+  'orders:view', 'orders:manage',
+  'providers:view', 'providers:manage',
+  'disputes:view', 'disputes:manage',
+  'reviews:view', 'reviews:manage',
+  'users:view', 'users:manage',
+  'pets:view', 'pets:manage',
+  'dashboard:view',
+]
+
+export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
+  'orders:view': 'Xem đơn hàng',
+  'orders:manage': 'Quản lý đơn hàng',
+  'providers:view': 'Xem đối tác',
+  'providers:manage': 'Duyệt & quản lý đối tác',
+  'disputes:view': 'Xem tranh chấp',
+  'disputes:manage': 'Xử lý tranh chấp',
+  'reviews:view': 'Xem đánh giá',
+  'reviews:manage': 'Kiểm duyệt đánh giá',
+  'users:view': 'Xem người dùng',
+  'users:manage': 'Quản lý người dùng',
+  'pets:view': 'Xem thú cưng',
+  'pets:manage': 'Quản lý thú cưng',
+  'dashboard:view': 'Xem dashboard & thống kê',
+}
 
 export const PET_SPECIES: PetSpecies[] = ['dog', 'cat', 'other']
 

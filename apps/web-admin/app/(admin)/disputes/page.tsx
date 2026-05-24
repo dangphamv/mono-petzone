@@ -12,6 +12,7 @@ import {
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import { useDisputes, useResolveDispute, useCreateDispute } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { CopyableId } from '@/components/copyable-id'
@@ -44,6 +45,8 @@ export default function DisputesPage() {
     search: table.debouncedSearch,
     filters: table.filters,
   })
+  const me = useCurrentUser()
+  const canManage = me?.can('disputes:manage') ?? false
   const resolve = useResolveDispute()
   const createDispute = useCreateDispute()
   const [selected, setSelected] = useState<Dispute | null>(null)
@@ -144,7 +147,7 @@ export default function DisputesPage() {
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
-        if (row.original.status !== 'open') return null
+        if (row.original.status !== 'open' || !canManage) return null
         return (
           <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelected(row.original) }}>
             {t('disputes.resolve')}
@@ -152,7 +155,7 @@ export default function DisputesPage() {
         )
       },
     },
-  ], [t])
+  ], [t, canManage])
 
   const statusOptions = useMemo(() => [
     { label: t('status.open'), value: 'open' },
@@ -171,10 +174,12 @@ export default function DisputesPage() {
             <p className="page-description">{t('disputes.subtitle')}</p>
           </div>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus size={16} />
-          {t('common.create')}
-        </Button>
+        {canManage && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus size={16} />
+            {t('common.create')}
+          </Button>
+        )}
       </div>
 
       <DataTable

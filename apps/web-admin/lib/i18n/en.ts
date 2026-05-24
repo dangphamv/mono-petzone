@@ -411,6 +411,13 @@ export const en = {
 
   // Orders - Extended info
   'orders.payment_method': 'Payment Method',
+  'orders.transaction_info': 'Transaction info',
+  'orders.transaction_gateway': 'Gateway',
+  'orders.transaction_ref': 'Transaction ref',
+  'orders.transaction_paid_at': 'Paid at',
+  'orders.transaction_amount': 'Amount',
+  'orders.transaction_none': 'No payment transaction yet',
+  'orders.payment_status': 'Payment status',
   'orders.disbursement_status': 'Disbursement Status',
   'orders.pet_info': 'Pet Information',
   'orders.addon_services': 'Add-on Services',

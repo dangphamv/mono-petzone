@@ -3,7 +3,7 @@
 import { use, useState } from 'react'
 import {
   ArrowLeft, ArrowRight, Ban, ChevronDown, ChevronRight,
-  PawPrint, Receipt, BedDouble, XCircle, Calendar, Moon, Users, Building2, ShieldCheck,
+  PawPrint, Receipt, BedDouble, XCircle, Calendar, Moon, Users, Building2, ShieldCheck, CreditCard,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -23,6 +23,12 @@ const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'info' | 'success' 
   pending_payment: 'warning', pending: 'warning',
   confirmed: 'default', checked_in: 'info', in_progress: 'info', check_out: 'info',
   completed: 'success', cancelled: 'destructive', disputed: 'destructive',
+}
+
+const PAYMENT_STATUS_VARIANT: Record<string, 'default' | 'warning' | 'info' | 'success' | 'destructive'> = {
+  completed: 'success', captured: 'success', split_completed: 'success', success: 'success',
+  pending: 'warning', awaiting_payment: 'warning', processing: 'warning',
+  failed: 'destructive', refunded: 'destructive', split_failed: 'destructive',
 }
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -103,6 +109,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const numNights = Number(order.num_nights) || 0
   const paymentVersion = Number(order.payment_version) || 1
   const cancellationPolicy = (order.cancellation_policy as string) || '-'
+
+  const payment = order.payment as Record<string, unknown> | null
+  const payMethod = payment?.method as string | undefined
+  const payStatus = payment?.status as string | undefined
+  const payGateway = payment?.psp_provider as string | undefined
+  const payRef = (payment?.transaction_ref as string) || (payment?.psp_order_id as string) || undefined
+  const payPaidAt = (payment?.paid_at as string) || (payment?.captured_at as string) || undefined
+  const payAmount = payment?.amount != null ? Number(payment.amount) : undefined
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
@@ -198,6 +212,35 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
             <DatePill label={t('orders.check_out')} date={order.check_out_date as string} icon={Calendar} align="end" />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Transaction info */}
+      <Card className="mt-6">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2">
+            <CreditCard size={16} className="text-primary" />
+            <span className="text-sm font-medium">{t('orders.transaction_info')}</span>
+            {paymentVersion === 2 && (
+              <Badge variant="outline" className="border-primary/40 bg-primary/5 text-primary">v2 · 9Pay PSP</Badge>
+            )}
+            {payStatus && (
+              <Badge variant={PAYMENT_STATUS_VARIANT[payStatus] ?? 'default'} className="ml-auto uppercase">
+                {payStatus.replace(/_/g, ' ')}
+              </Badge>
+            )}
+          </div>
+          {payment ? (
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <TxnField label={t('orders.payment_method')} value={payMethod?.toUpperCase()} />
+              {payGateway && <TxnField label={t('orders.transaction_gateway')} value={payGateway.toUpperCase()} />}
+              <TxnField label={t('orders.transaction_amount')} value={payAmount != null ? formatVND(payAmount) : undefined} />
+              <TxnField label={t('orders.transaction_ref')} value={payRef} mono />
+              <TxnField label={t('orders.transaction_paid_at')} value={payPaidAt ? formatDateTime(payPaidAt) : undefined} />
+            </dl>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">{t('orders.transaction_none')}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -413,6 +456,17 @@ function CollapsibleCard({ title, icon, open, onToggle, children }: {
       </button>
       {open && <CardContent className="pt-0 pb-4 px-4">{children}</CardContent>}
     </Card>
+  )
+}
+
+function TxnField({ label, value, mono }: { label: string; value?: React.ReactNode; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={`mt-1 font-medium first-letter:uppercase ${mono ? 'break-all font-mono text-xs' : ''}`}>
+        {value || <span className="text-muted-foreground">—</span>}
+      </p>
+    </div>
   )
 }
 

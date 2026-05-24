@@ -13,6 +13,7 @@ import {
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import { useOrders, useCancelOrder, useSendOrderMessage } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { CopyableId } from '@/components/copyable-id'
@@ -33,6 +34,8 @@ export default function OrdersPage() {
   const { t } = useI18n()
   const router = useRouter()
   const table = useTableParams()
+  const me = useCurrentUser()
+  const canManage = me?.can('orders:manage') ?? false
   const { data, isLoading } = useOrders({
     page: table.page,
     limit: table.pageSize,
@@ -164,11 +167,13 @@ export default function OrdersPage() {
                   <Eye size={14} className="mr-2" />
                   {t('orders.view_detail')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setMessageTarget(row.original)}>
-                  <MessageSquare size={14} className="mr-2" />
-                  {t('orders.send_message')}
-                </DropdownMenuItem>
-                {canCancel && (
+                {canManage && (
+                  <DropdownMenuItem onSelect={() => setMessageTarget(row.original)}>
+                    <MessageSquare size={14} className="mr-2" />
+                    {t('orders.send_message')}
+                  </DropdownMenuItem>
+                )}
+                {canCancel && canManage && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -186,7 +191,7 @@ export default function OrdersPage() {
         )
       },
     },
-  ], [t, router])
+  ], [t, router, canManage])
 
   const statusOptions = useMemo(() => [
     { label: t('status.pending'), value: 'pending' },
@@ -210,12 +215,14 @@ export default function OrdersPage() {
             <p className="page-description">{t('orders.subtitle')}</p>
           </div>
         </div>
-        <Button asChild>
-          <Link href="/orders/new">
-            <Plus size={16} />
-            {t('orders.create')}
-          </Link>
-        </Button>
+        {canManage && (
+          <Button asChild>
+            <Link href="/orders/new">
+              <Plus size={16} />
+              {t('orders.create')}
+            </Link>
+          </Button>
+        )}
       </div>
 
       <DataTable

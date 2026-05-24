@@ -14,6 +14,7 @@ import {
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import { useOrderDetail, useCancelOrder } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
 
@@ -36,6 +37,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const { t } = useI18n()
 
   const { data: order, isLoading } = useOrderDetail(id)
+  const me = useCurrentUser()
+  const canManage = me?.can('orders:manage') ?? false
   const cancelOrder = useCancelOrder()
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -150,7 +153,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{t('orders.total_price')}</p>
               <p className="mt-0.5 font-heading text-2xl font-bold text-primary tabular-nums">{formatVND(totalPrice)}</p>
             </div>
-            {CANCELLABLE_STATUSES.has(status) && (
+            {CANCELLABLE_STATUSES.has(status) && canManage && (
               <Button size="sm" variant="destructive" onClick={() => setCancelOpen(true)}>
                 <Ban size={14} />
                 {t('orders.cancel_order')}

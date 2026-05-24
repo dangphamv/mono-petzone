@@ -94,6 +94,38 @@ export const adminUpdatePetSchema = adminCreatePetSchema.omit({ owner_id: true }
   is_active: z.boolean().optional(),
 })
 
+// Keep in sync with ADMIN_PERMISSIONS in @petzone/shared (validators has no shared dep).
+export const ADMIN_PERMISSION_VALUES = [
+  'orders:view', 'orders:manage',
+  'providers:view', 'providers:manage',
+  'disputes:view', 'disputes:manage',
+  'reviews:view', 'reviews:manage',
+  'users:view', 'users:manage',
+  'pets:view', 'pets:manage',
+  'dashboard:view',
+] as const
+
+export const adminCreateAccountSchema = z
+  .object({
+    full_name: z.string().trim().min(1).max(100),
+    email: z.string().trim().email(),
+    password: z.string().min(8).max(72),
+    role: z.enum(['admin', 'staff']).default('admin'),
+    permissions: z.array(z.enum(ADMIN_PERMISSION_VALUES)).default([]),
+  })
+  .refine((d) => d.role !== 'staff' || d.permissions.length > 0, {
+    message: 'Staff phải có ít nhất 1 quyền',
+    path: ['permissions'],
+  })
+  .refine((d) => d.role !== 'admin' || d.permissions.length === 0, {
+    message: 'Tài khoản admin không nhận permissions',
+    path: ['permissions'],
+  })
+
+export const updateStaffPermissionsSchema = z.object({
+  permissions: z.array(z.enum(ADMIN_PERMISSION_VALUES)).min(1),
+})
+
 export type VerifyProviderInput = z.infer<typeof verifyProviderSchema>
 export type AdminUpdateProviderInput = z.infer<typeof adminUpdateProviderSchema>
 export type AdminCreateProviderInput = z.infer<typeof adminCreateProviderSchema>
@@ -103,6 +135,8 @@ export type RequestInfoInput = z.infer<typeof requestInfoSchema>
 export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>
 export type AdminCreateDisputeInput = z.infer<typeof adminCreateDisputeSchema>
 export type SuspendUserInput = z.infer<typeof suspendUserSchema>
+export type AdminCreateAccountInput = z.infer<typeof adminCreateAccountSchema>
+export type UpdateStaffPermissionsInput = z.infer<typeof updateStaffPermissionsSchema>
 export type ModerateReviewInput = z.infer<typeof moderateReviewSchema>
 
 export const updateConfigSchema = z.object({

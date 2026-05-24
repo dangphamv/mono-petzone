@@ -19,14 +19,16 @@ import {
   Skeleton,
   Avatar, AvatarImage, AvatarFallback,
 } from '@petzone/ui'
+import { ADMIN_PERMISSION_LABELS } from '@petzone/shared'
 import { useSuspendUser, useReactivateUser, useOwnerPets, useUserDetail, useOrders } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { displayId } from '@/lib/display-id'
 import { CopyableId } from '@/components/copyable-id'
 
 const roleVariant = (r: string) =>
-  r === 'admin' ? 'muted' : r === 'provider' ? 'default' : 'info'
+  r === 'admin' ? 'muted' : r === 'provider' ? 'default' : r === 'staff' ? 'warning' : 'info'
 const ROLE_KEY: Record<string, string> = {
-  owner: 'role.owner', provider: 'role.provider', admin: 'role.admin',
+  owner: 'role.owner', provider: 'role.provider', admin: 'role.admin', staff: 'role.staff',
 }
 
 const statusVariant = (s: string) =>
@@ -51,6 +53,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const router = useRouter()
   const { data: user, isLoading } = useUserDetail(id)
+  const me = useCurrentUser()
+  const can = (p: string) => me?.can(p) ?? false
   const suspend = useSuspendUser()
   const reactivate = useReactivateUser()
   const isOwner = (user?.role as string) === 'owner'
@@ -159,7 +163,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {status === 'active' && (
+          {status === 'active' && can('users:manage') && (
             <Button size="sm" variant="destructive" onClick={() => setShowModal(true)}>
               <Ban size={14} /> {t('users.suspend')}
             </Button>
@@ -182,10 +186,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     <h3 className="font-heading font-semibold text-destructive">{t('users.suspension_info')}</h3>
                     {s?.is_permanent && <Badge variant="destructive">{t('users.permanent_ban')}</Badge>}
                   </div>
-                  <Button size="sm" className="gap-1.5" onClick={() => setShowReactivate(true)}>
-                    <CheckCircle2 size={14} />
-                    {t('users.reactivate')}
-                  </Button>
+                  {can('users:manage') && (
+                    <Button size="sm" className="gap-1.5" onClick={() => setShowReactivate(true)}>
+                      <CheckCircle2 size={14} />
+                      {t('users.reactivate')}
+                    </Button>
+                  )}
                 </div>
                 <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                   <div className="flex gap-2">
@@ -276,6 +282,41 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
       </div>
+
+      {/* Permissions (admin / staff) */}
+      {(role === 'admin' || role === 'staff') && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                <ShieldCheck size={14} />
+              </span>
+              {t('users.permissions')}
+              <Badge variant={role === 'admin' ? 'muted' : 'warning'} className="ml-1">
+                {t((ROLE_KEY[role] || 'role.owner') as any)}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {role === 'admin' ? (
+              <Badge variant="success" className="gap-1">
+                <ShieldCheck size={12} />
+                {t('users.admin_full_access')}
+              </Badge>
+            ) : (user.permissions as string[])?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {(user.permissions as string[]).map((p) => (
+                  <Badge key={p} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                    {ADMIN_PERMISSION_LABELS[p as keyof typeof ADMIN_PERMISSION_LABELS] || p}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('users.no_permissions')}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pet grid (owner only) */}
       {isOwner && (

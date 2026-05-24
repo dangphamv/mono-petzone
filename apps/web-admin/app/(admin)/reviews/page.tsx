@@ -11,6 +11,7 @@ import {
 } from '@petzone/ui'
 import { useI18n } from '@/lib/i18n'
 import { useReviews, useModerateReview } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 
@@ -40,6 +41,8 @@ export default function ReviewsPage() {
     search: table.debouncedSearch,
     filters: table.filters,
   })
+  const me = useCurrentUser()
+  const canManage = me?.can('reviews:manage') ?? false
   const moderate = useModerateReview()
   const [selected, setSelected] = useState<Review | null>(null)
   const [action, setAction] = useState<'hide' | 'show' | null>(null)
@@ -116,7 +119,7 @@ export default function ReviewsPage() {
             <Eye size={12} />
             {t('reviews.view_detail')}
           </Button>
-          {row.original.is_visible ? (
+          {canManage && (row.original.is_visible ? (
             <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => { setSelected(row.original); setAction('hide') }}>
               {t('reviews.hide')}
             </Button>
@@ -124,11 +127,11 @@ export default function ReviewsPage() {
             <Button size="sm" onClick={() => { setSelected(row.original); setAction('show') }}>
               {t('reviews.show')}
             </Button>
-          )}
+          ))}
         </div>
       ),
     },
-  ], [t])
+  ], [t, canManage])
 
   const visibilityOptions = useMemo(() => [
     { label: t('status.visible'), value: 'visible' },
@@ -277,7 +280,7 @@ export default function ReviewsPage() {
             </div>
           )}
           <DialogFooter>
-            {viewing?.is_visible ? (
+            {!canManage ? null : viewing?.is_visible ? (
               <Button
                 variant="outline"
                 className="text-destructive hover:text-destructive"

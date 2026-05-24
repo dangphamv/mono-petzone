@@ -7,6 +7,7 @@ import {
 } from '@petzone/validators';
 import type { AdminCreatePetInput, AdminUpdatePetInput } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
@@ -26,6 +27,7 @@ export class AdminPetsController {
   constructor(private readonly service: AdminPetsService) {}
 
   @Get('pets')
+  @StaffAccess('pets:view')
   @ApiOperation({ summary: 'List all pets across the platform' })
   @ApiResponse({ status: 200, description: 'Pets list returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -47,6 +49,7 @@ export class AdminPetsController {
   }
 
   @Get('pets/:id')
+  @StaffAccess('pets:view')
   @ApiOperation({ summary: 'Get pet detail with owner info' })
   @ApiResponse({ status: 200, description: 'Pet detail returned' })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -57,6 +60,7 @@ export class AdminPetsController {
   }
 
   @Post('pets')
+  @StaffAccess('pets:manage')
   @ApiOperation({ summary: 'Create a pet on behalf of an owner' })
   @ApiResponse({ status: 201, description: 'Pet created' })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
@@ -71,6 +75,7 @@ export class AdminPetsController {
   }
 
   @Patch('pets/:id')
+  @StaffAccess('pets:manage')
   @ApiOperation({ summary: 'Update a pet (admin)' })
   @ApiResponse({ status: 200, description: 'Pet updated' })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })

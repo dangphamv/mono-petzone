@@ -12,16 +12,17 @@ import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useI18n } from '@/lib/i18n'
 import type { TranslationKey } from '@/lib/i18n'
 
-const navItems: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
-  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { href: '/providers', labelKey: 'nav.providers', icon: Building2 },
-  { href: '/orders', labelKey: 'nav.orders', icon: ClipboardList },
-  { href: '/disputes', labelKey: 'nav.disputes', icon: AlertTriangle },
-  { href: '/users', labelKey: 'nav.users', icon: Users },
-  { href: '/pets', labelKey: 'nav.pets', icon: PawPrint },
-  { href: '/reviews', labelKey: 'nav.reviews', icon: Star },
-  { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
-  { href: '/config', labelKey: 'nav.config', icon: Settings },
+// perm = required permission to see the item; null = admin-only.
+const navItems: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard; perm: string | null; section: 'menu' | 'system' }[] = [
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, perm: 'dashboard:view', section: 'menu' },
+  { href: '/providers', labelKey: 'nav.providers', icon: Building2, perm: 'providers:view', section: 'menu' },
+  { href: '/orders', labelKey: 'nav.orders', icon: ClipboardList, perm: 'orders:view', section: 'menu' },
+  { href: '/disputes', labelKey: 'nav.disputes', icon: AlertTriangle, perm: 'disputes:view', section: 'menu' },
+  { href: '/users', labelKey: 'nav.users', icon: Users, perm: 'users:view', section: 'menu' },
+  { href: '/pets', labelKey: 'nav.pets', icon: PawPrint, perm: 'pets:view', section: 'menu' },
+  { href: '/reviews', labelKey: 'nav.reviews', icon: Star, perm: 'reviews:view', section: 'system' },
+  { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, perm: 'dashboard:view', section: 'system' },
+  { href: '/config', labelKey: 'nav.config', icon: Settings, perm: null, section: 'system' },
 ]
 
 function NavSection({ items, label }: { items: typeof navItems; label: string }) {
@@ -66,6 +67,11 @@ export function Sidebar() {
   const displayEmail = user?.email || 'admin@petzone.vn'
   const displayRole = user?.role || 'admin'
 
+  const canSee = (perm: string | null) =>
+    perm === null ? user?.role === 'admin' : (user?.can(perm) ?? false)
+  const menuItems = navItems.filter((i) => i.section === 'menu' && canSee(i.perm))
+  const systemItems = navItems.filter((i) => i.section === 'system' && canSee(i.perm))
+
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-full w-[260px] flex-col bg-sidebar">
       {/* Logo */}
@@ -83,9 +89,13 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        <NavSection items={navItems.slice(0, 6)} label={t('nav.menu')} />
-        <div className="pb-1 pt-4" />
-        <NavSection items={navItems.slice(6)} label={t('nav.system')} />
+        {menuItems.length > 0 && <NavSection items={menuItems} label={t('nav.menu')} />}
+        {systemItems.length > 0 && (
+          <>
+            <div className="pb-1 pt-4" />
+            <NavSection items={systemItems} label={t('nav.system')} />
+          </>
+        )}
       </nav>
 
       <div className="mx-4 h-px bg-sidebar-border" />

@@ -367,6 +367,33 @@ export function useUserDetail(id: string) {
   })
 }
 
+export function useCreateAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { full_name: string; email: string; password: string; role: 'admin' | 'staff'; permissions: string[] }) =>
+      api('/admin/users', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Tạo tài khoản thành công')
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useUpdateStaffPermissions() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, permissions }: { id: string; permissions: string[] }) =>
+      api(`/admin/users/${id}/permissions`, { method: 'PATCH', body: JSON.stringify({ permissions }) }),
+    onSuccess: () => {
+      toast.success('Cập nhật quyền thành công')
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'user'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
 export function useSuspendUser() {
   const qc = useQueryClient()
   return useMutation({

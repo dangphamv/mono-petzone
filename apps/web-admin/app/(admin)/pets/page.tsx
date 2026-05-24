@@ -15,6 +15,7 @@ import {
   usePets, useUsers, useCreatePet, useUpdatePet,
   type CreatePetBody, type UpdatePetBody,
 } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
@@ -90,6 +91,8 @@ export default function PetsPage() {
     filters: table.filters,
   })
 
+  const me = useCurrentUser()
+  const canManage = me?.can('pets:manage') ?? false
   const createPet = useCreatePet()
   const updatePet = useUpdatePet()
 
@@ -252,15 +255,17 @@ export default function PetsPage() {
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => (
-        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-          <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(row.original)}>
-            <Pencil size={12} />
-            {t('common.edit')}
-          </Button>
-        </div>
+        canManage ? (
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(row.original)}>
+              <Pencil size={12} />
+              {t('common.edit')}
+            </Button>
+          </div>
+        ) : null
       ),
     },
-  ], [t])
+  ], [t, canManage])
 
   const speciesOptions = useMemo(() => [
     { label: t('pets.species.dog'), value: 'dog' },
@@ -285,10 +290,12 @@ export default function PetsPage() {
             <p className="page-description">{t('pets.subtitle')}</p>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-1">
-          <Plus size={16} />
-          {t('pets.create')}
-        </Button>
+        {canManage && (
+          <Button onClick={openCreate} className="gap-1">
+            <Plus size={16} />
+            {t('pets.create')}
+          </Button>
+        )}
       </div>
 
       <DataTable

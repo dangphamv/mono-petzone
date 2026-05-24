@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { PAGINATION } from '@petzone/shared';
 import { resolveDisputeSchema, adminCreateDisputeSchema } from '@petzone/validators';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { StaffAccess } from '../../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthUser } from '../../../common/interfaces/auth-user';
@@ -27,6 +28,7 @@ export class AdminDisputesController {
   constructor(private readonly service: AdminDisputesService) {}
 
   @Get('disputes')
+  @StaffAccess('disputes:view')
   @ApiOperation({ summary: 'List all disputes' })
   @ApiResponse({ status: 200, description: 'Disputes list returned', schema: { example: okPaginated([EXAMPLE_DISPUTE], 'Disputes list returned', 3) } })
   @ApiResponse({ status: 401, description: 'Unauthorized', schema: { example: ERROR_401 } })
@@ -39,6 +41,7 @@ export class AdminDisputesController {
   }
 
   @Post('disputes')
+  @StaffAccess('disputes:manage')
   @ApiOperation({ summary: 'Create a dispute on behalf of an owner or provider' })
   @ApiResponse({ status: 201, description: 'Dispute created', schema: { example: ok(EXAMPLE_DISPUTE, 'Dispute created') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })
@@ -50,6 +53,7 @@ export class AdminDisputesController {
   }
 
   @Patch('disputes/:id/resolve')
+  @StaffAccess('disputes:manage')
   @ApiOperation({ summary: 'Resolve a dispute' })
   @ApiResponse({ status: 200, description: 'Dispute resolved', schema: { example: ok(EXAMPLE_DISPUTE_RESOLUTION, 'Dispute resolved') } })
   @ApiResponse({ status: 400, description: 'Validation error', schema: { example: ERROR_400 } })

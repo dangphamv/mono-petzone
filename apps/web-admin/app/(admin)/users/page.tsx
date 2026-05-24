@@ -2,15 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users as UsersIcon } from 'lucide-react'
+import { Users as UsersIcon, Plus } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
-  Button, Badge,
+  Button, Badge, Input,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Textarea, Label, Checkbox,
 } from '@petzone/ui'
+import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_LABELS } from '@petzone/shared'
 import { useI18n } from '@/lib/i18n'
-import { useUsers, useSuspendUser } from '@/lib/hooks/use-admin'
+import { useUsers, useSuspendUser, useCreateAccount, useUpdateStaffPermissions } from '@/lib/hooks/use-admin'
+import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { useTableParams } from '@/lib/hooks/use-table-params'
 import { DataTable, DataTableColumnHeader, DataTableFacetedFilter } from '@/components/data-table'
 import { displayId } from '@/lib/display-id'
@@ -22,6 +24,7 @@ const ROLE_CLASS: Record<string, string> = {
   owner: 'bg-violet-50 text-violet-700',
   provider: 'bg-cyan-50 text-cyan-700',
   admin: 'bg-slate-100 text-slate-700',
+  staff: 'bg-amber-50 text-amber-700',
 }
 const STATUS_VARIANT: Record<string, 'success' | 'destructive'> = {
   active: 'success', suspended: 'destructive', banned: 'destructive',
@@ -42,10 +45,43 @@ export default function UsersPage() {
     search: table.debouncedSearch,
     filters: table.filters,
   })
+  const me = useCurrentUser()
+  const isAdmin = me?.role === 'admin'
   const suspend = useSuspendUser()
+  const createAccount = useCreateAccount()
+  const updatePerms = useUpdateStaffPermissions()
   const [selected, setSelected] = useState<User | null>(null)
   const [reason, setReason] = useState('')
   const [isPermanent, setIsPermanent] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const emptyAccount = { full_name: '', email: '', password: '', role: 'admin' as 'admin' | 'staff', permissions: [] as string[] }
+  const [accountForm, setAccountForm] = useState(emptyAccount)
+  const [editingPerms, setEditingPerms] = useState<User | null>(null)
+  const [editPerms, setEditPerms] = useState<string[]>([])
+
+  const closeCreate = () => { setCreating(false); setAccountForm(emptyAccount) }
+  const toggle = (list: string[], perm: string) =>
+    list.includes(perm) ? list.filter((p) => p !== perm) : [...list, perm]
+
+  const handleCreate = () => {
+    const { full_name, email, password, role, permissions } = accountForm
+    if (!full_name.trim() || !email.trim() || password.length < 8) return
+    if (role === 'staff' && permissions.length === 0) return
+    createAccount.mutate(
+      { full_name: full_name.trim(), email: email.trim(), password, role, permissions: role === 'staff' ? permissions : [] },
+      { onSuccess: closeCreate },
+    )
+  }
+
+  const openEditPerms = (u: User) => { setEditingPerms(u); setEditPerms((u.permissions as string[]) ?? []) }
+  const closeEditPerms = () => { setEditingPerms(null); setEditPerms([]) }
+  const handleUpdatePerms = () => {
+    if (!editingPerms || editPerms.length === 0) return
+    updatePerms.mutate(
+      { id: editingPerms.id as string, permissions: editPerms },
+      { onSuccess: closeEditPerms },
+    )
+  }
 
   const handleSuspend = () => {
     if (!selected || !reason) return
@@ -115,20 +151,33 @@ export default function UsersPage() {
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
-        if (row.original.status !== 'active') return null
+        const isStaff = row.original.role === 'staff'
+        const isActive = row.original.status === 'active'
+        const showEdit = isStaff && isAdmin
+        const showSuspend = isActive && (me?.can('users:manage') ?? false)
+        if (!showEdit && !showSuspend) return null
         return (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setSelected(row.original)}
-          >
-            {t('users.suspend')}
-          </Button>
+          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {showEdit && (
+              <Button size="sm" variant="outline" onClick={() => openEditPerms(row.original)}>
+                {t('users.edit_permissions')}
+              </Button>
+            )}
+            {showSuspend && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setSelected(row.original)}
+              >
+                {t('users.suspend')}
+              </Button>
+            )}
+          </div>
         )
       },
     },
-  ], [t])
+  ], [t, isAdmin, me])
 
   const roleOptions = useMemo(() => [
     { label: t('role.owner'), value: 'owner' },
@@ -144,12 +193,20 @@ export default function UsersPage() {
 
   return (
     <div className="animate-[fade-in_0.3s_ease-out]">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="stat-icon bg-blue-50 text-blue-600"><UsersIcon size={20} /></div>
-        <div>
-          <h1 className="page-header">{t('users.title')}</h1>
-          <p className="page-description">{t('users.subtitle')}</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="stat-icon bg-blue-50 text-blue-600"><UsersIcon size={20} /></div>
+          <div>
+            <h1 className="page-header">{t('users.title')}</h1>
+            <p className="page-description">{t('users.subtitle')}</p>
+          </div>
         </div>
+        {isAdmin && (
+          <Button onClick={() => setCreating(true)} className="gap-1">
+            <Plus size={16} />
+            {t('users.create_account')}
+          </Button>
+        )}
       </div>
 
       <DataTable
@@ -185,6 +242,109 @@ export default function UsersPage() {
           </>
         }
       />
+
+      <Dialog open={creating} onOpenChange={(open) => { if (!open) closeCreate() }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('users.create_account_title')}</DialogTitle>
+            <DialogDescription>{t('users.create_account_desc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-name">{t('users.name')} *</Label>
+              <Input id="acc-name" value={accountForm.full_name} onChange={(e) => setAccountForm({ ...accountForm, full_name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-email">{t('users.email')} *</Label>
+              <Input id="acc-email" type="email" autoComplete="off" value={accountForm.email} onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-password">{t('users.password')} *</Label>
+              <Input id="acc-password" type="text" autoComplete="new-password" value={accountForm.password} onChange={(e) => setAccountForm({ ...accountForm, password: e.target.value })} />
+              <p className="text-xs text-muted-foreground">{t('users.password_hint')}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('users.account_role')} *</Label>
+              <div className="inline-flex rounded-lg border bg-muted/40 p-1">
+                {(['admin', 'staff'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setAccountForm({ ...accountForm, role: r })}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${accountForm.role === r ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {t(`role.${r}` as any)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {accountForm.role === 'admin' ? t('users.role_admin_hint') : t('users.role_staff_hint')}
+              </p>
+            </div>
+            {accountForm.role === 'staff' && (
+              <div className="space-y-2">
+                <Label>{t('users.permissions')} *</Label>
+                <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+                  {ADMIN_PERMISSIONS.map((perm) => (
+                    <label key={perm} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={accountForm.permissions.includes(perm)}
+                        onCheckedChange={() => setAccountForm({ ...accountForm, permissions: toggle(accountForm.permissions, perm) })}
+                      />
+                      <span>{ADMIN_PERMISSION_LABELS[perm]}</span>
+                    </label>
+                  ))}
+                </div>
+                {accountForm.permissions.length === 0 && (
+                  <p className="text-xs text-destructive">{t('users.permissions_required')}</p>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCreate}>{t('common.cancel')}</Button>
+            <Button
+              onClick={handleCreate}
+              disabled={
+                createAccount.isPending ||
+                !accountForm.full_name.trim() ||
+                !accountForm.email.trim() ||
+                accountForm.password.length < 8 ||
+                (accountForm.role === 'staff' && accountForm.permissions.length === 0)
+              }
+            >
+              {createAccount.isPending ? t('common.processing') : t('users.create_account')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingPerms !== null} onOpenChange={(open) => { if (!open) closeEditPerms() }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('users.edit_permissions_title')}</DialogTitle>
+            <DialogDescription>{editingPerms?.full_name as string}</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+            {ADMIN_PERMISSIONS.map((perm) => (
+              <label key={perm} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={editPerms.includes(perm)}
+                  onCheckedChange={() => setEditPerms(toggle(editPerms, perm))}
+                />
+                <span>{ADMIN_PERMISSION_LABELS[perm]}</span>
+              </label>
+            ))}
+          </div>
+          {editPerms.length === 0 && <p className="text-xs text-destructive">{t('users.permissions_required')}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditPerms}>{t('common.cancel')}</Button>
+            <Button onClick={handleUpdatePerms} disabled={updatePerms.isPending || editPerms.length === 0}>
+              {updatePerms.isPending ? t('common.processing') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>

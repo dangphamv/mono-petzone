@@ -411,6 +411,13 @@ export const vi = {
 
   // Orders - Extended info
   'orders.payment_method': 'Phương thức thanh toán',
+  'orders.transaction_info': 'Thông tin giao dịch',
+  'orders.transaction_gateway': 'Cổng thanh toán',
+  'orders.transaction_ref': 'Mã giao dịch',
+  'orders.transaction_paid_at': 'Thời gian thanh toán',
+  'orders.transaction_amount': 'Số tiền',
+  'orders.transaction_none': 'Chưa có giao dịch thanh toán',
+  'orders.payment_status': 'Trạng thái thanh toán',
   'orders.disbursement_status': 'Trạng thái giải ngân',
   'orders.pet_info': 'Thông tin thú cưng',
   'orders.addon_services': 'Dịch vụ bổ sung',

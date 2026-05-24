@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import type { AdminCreateOrderInput, AdminMessageInput } from '@petzone/validators';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { OrdersService } from '../../orders/orders.service';
-import { ORDER_COLUMNS, ORDER_LIST_COLUMNS } from '../../../common/constants/columns';
+import { ORDER_COLUMNS, ORDER_LIST_COLUMNS, PAYMENT_COLUMNS, PAYMENT_V2_COLUMNS } from '../../../common/constants/columns';
 import { paginate, type PaginationParams } from '../../../common/utils/pagination';
 import { AdminActionLogService } from '../_shared/admin-action-log.service';
 
@@ -85,7 +85,7 @@ export class AdminOrdersService {
   async getOrderDetail(id: string) {
     const { data: order, error } = await this.supabase.client
       .from('orders')
-      .select(`${ORDER_COLUMNS}, providers(id, display_id, business_name, address, phone), room_types(id, name, capacity, price_per_night), users!orders_owner_id_fkey(id, display_id, email, full_name, phone, avatar_url)`)
+      .select(`${ORDER_COLUMNS}, payment_version, providers(id, display_id, business_name, address, phone), room_types(id, name, capacity, price_per_night), users!orders_owner_id_fkey(id, display_id, email, full_name, phone, avatar_url)`)
       .eq('id', id)
       .single();
     if (error || !order) {
@@ -95,20 +95,37 @@ export class AdminOrdersService {
 
     const petIds = Array.isArray(order.pet_ids) ? (order.pet_ids as string[]) : [];
     const addOnIds = Array.isArray(order.add_on_ids) ? (order.add_on_ids as string[]) : [];
+    const paymentVersion = Number((order as { payment_version?: number }).payment_version) || 1;
 
-    const [petsRes, addOnsRes] = await Promise.all([
+    const [petsRes, addOnsRes, paymentRes] = await Promise.all([
       petIds.length
         ? this.supabase.client.from('pets').select('id, name, species, breed, weight_kg, photos').in('id', petIds)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
       addOnIds.length
         ? this.supabase.client.from('add_on_services').select('id, name, price, price_type').in('id', addOnIds)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      paymentVersion === 2
+        ? (this.supabase.client as unknown as { from: (t: string) => any })
+            .from('payments_v2')
+            .select(PAYMENT_V2_COLUMNS)
+            .eq('order_id', id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : this.supabase.client
+            .from('payments')
+            .select(PAYMENT_COLUMNS)
+            .eq('order_id', id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
     ]);
 
     return {
       ...order,
       pets: petsRes.data ?? [],
       add_ons: addOnsRes.data ?? [],
+      payment: paymentRes.data ?? null,
     };
   }
 

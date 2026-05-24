@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users as UsersIcon, Plus } from 'lucide-react'
+import { Users as UsersIcon, Plus, MoreHorizontal, Eye, Ban, ShieldCheck } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   Button, Badge, Input,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Textarea, Label, Checkbox,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@petzone/ui'
 import { ADMIN_PERMISSIONS, ADMIN_PERMISSION_LABELS } from '@petzone/shared'
 import { useI18n } from '@/lib/i18n'
@@ -155,29 +156,44 @@ export default function UsersPage() {
         const isActive = row.original.status === 'active'
         const showEdit = isStaff && isAdmin
         const showSuspend = isActive && (me?.can('users:manage') ?? false)
-        if (!showEdit && !showSuspend) return null
         return (
-          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {showEdit && (
-              <Button size="sm" variant="outline" onClick={() => openEditPerms(row.original)}>
-                {t('users.edit_permissions')}
-              </Button>
-            )}
-            {showSuspend && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setSelected(row.original)}
-              >
-                {t('users.suspend')}
-              </Button>
-            )}
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t('common.actions')}>
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={() => router.push(`/users/${row.original.id}`)}>
+                  <Eye size={14} className="mr-2" />
+                  {t('common.view_detail')}
+                </DropdownMenuItem>
+                {showEdit && (
+                  <DropdownMenuItem onSelect={() => openEditPerms(row.original)}>
+                    <ShieldCheck size={14} className="mr-2" />
+                    {t('users.edit_permissions')}
+                  </DropdownMenuItem>
+                )}
+                {showSuspend && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => setSelected(row.original)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Ban size={14} className="mr-2" />
+                      {t('users.suspend')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )
       },
     },
-  ], [t, isAdmin, me])
+  ], [t, isAdmin, me, router])
 
   const roleOptions = useMemo(() => [
     { label: t('role.owner'), value: 'owner' },

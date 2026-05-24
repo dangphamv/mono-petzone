@@ -12,10 +12,11 @@ import {
   refreshTokenSchema,
   selectRoleSchema,
   forgotPasswordSchema,
+  resetPasswordSchema,
 } from '@petzone/validators';
 import type { AuthUser } from '../../common/interfaces/auth-user';
 import { AuthService } from './auth.service';
-import { SendOtpDto, VerifyOtpDto, LoginDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto, ForgotPasswordDto } from './dto';
+import { SendOtpDto, VerifyOtpDto, LoginDto, GoogleAuthDto, RefreshTokenDto, SelectRoleDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
 import {
   ok,
   EXAMPLE_OTP_SENT,
@@ -88,6 +89,17 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Too many requests', schema: { example: ERROR_429 } })
   forgotPassword(@Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordDto) {
     return this.authService.forgotPassword(body);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ApiOperation({ summary: 'Reset password using a token from the reset email' })
+  @ApiResponse({ status: 201, description: 'Password updated' })
+  @ApiResponse({ status: 400, description: 'Invalid/expired token or validation error', schema: { example: ERROR_400 } })
+  @ApiResponse({ status: 429, description: 'Too many requests', schema: { example: ERROR_429 } })
+  resetPassword(@Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordDto) {
+    return this.authService.resetPassword(body);
   }
 
   @Post('refresh')

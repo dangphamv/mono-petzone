@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import { createHash, createHmac } from 'crypto';
+import { MailService } from '../mail/mail.service';
+import { createHash, createHmac, randomBytes } from 'crypto';
 import { OTP_COLUMNS, USER_COLUMNS } from '../../common/constants/columns';
 import type {
   SendOtpInput,
@@ -17,6 +18,7 @@ import type {
   RefreshTokenInput,
   SelectRoleInput,
   ForgotPasswordInput,
+  ResetPasswordInput,
 } from '@petzone/validators';
 
 @Injectable()
@@ -24,7 +26,12 @@ export class AuthService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
+
+  private hashToken(raw: string): string {
+    return createHash('sha256').update(raw).digest('hex');
+  }
 
   private assertAccountActive(user: { status?: string | null; id?: string } | null | undefined) {
     if (!user) return;
@@ -350,16 +357,66 @@ export class AuthService {
   }
 
   async forgotPassword(body: ForgotPasswordInput) {
-    const redirectTo = body.redirect_to || this.config.get<string>('PASSWORD_RESET_REDIRECT_URL');
-    const { error } = await this.supabase
-      .createAuthClient()
-      .auth.resetPasswordForEmail(body.email, redirectTo ? { redirectTo } : undefined);
+    const email = body.email.toLowerCase();
+    const { data: user } = await this.supabase.client
+      .from('users')
+      .select('id, email, full_name')
+      .eq('email', email)
+      .maybeSingle();
 
-    if (error && !/not\s*found|user.*not|no.*user/i.test(error.message)) {
-      throw new BadRequestException(error.message);
+    // Always return { sent: true } regardless — never reveal whether the email exists.
+    if (user) {
+      const rawToken = randomBytes(32).toString('base64url');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+
+      const { error: insertErr } = await this.supabase.client.from('password_reset_tokens').insert({
+        user_id: (user as { id: string }).id,
+        token_hash: this.hashToken(rawToken),
+        expires_at: expiresAt,
+      });
+      if (!insertErr) {
+        const base =
+          body.redirect_to ||
+          this.config.get<string>('PASSWORD_RESET_REDIRECT_URL') ||
+          'http://localhost:3002/reset-password';
+        const sep = base.includes('?') ? '&' : '?';
+        const resetUrl = `${base}${sep}token=${rawToken}`;
+        await this.mail.sendPasswordReset(
+          (user as { email: string }).email,
+          resetUrl,
+          (user as { full_name?: string }).full_name,
+        );
+      }
     }
 
     return { sent: true };
+  }
+
+  async resetPassword(body: ResetPasswordInput) {
+    const { data: tokenRow } = await this.supabase.client
+      .from('password_reset_tokens')
+      .select('id, user_id, expires_at, used_at')
+      .eq('token_hash', this.hashToken(body.token))
+      .maybeSingle();
+
+    const row = tokenRow as { id: string; user_id: string; expires_at: string; used_at: string | null } | null;
+    if (!row || row.used_at || new Date(row.expires_at) < new Date()) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    const { error } = await this.supabase.client.auth.admin.updateUserById(row.user_id, {
+      password: body.password,
+    });
+    if (error) throw new BadRequestException(error.message);
+
+    // Mark this token used + invalidate any other outstanding tokens for the user.
+    await this.supabase.client
+      .from('password_reset_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('user_id', row.user_id)
+      .is('used_at', null);
+
+    return { success: true };
   }
 
   async refresh(body: RefreshTokenInput) {

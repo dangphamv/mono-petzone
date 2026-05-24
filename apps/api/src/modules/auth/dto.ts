@@ -46,3 +46,11 @@ export class ForgotPasswordDto {
   @ApiPropertyOptional({ example: 'https://admin.petzone.vn/reset-password', description: 'URL the recovery link redirects to' })
   redirect_to?: string;
 }
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'q8Zt...base64url', description: 'Raw reset token from the email link' })
+  token: string;
+
+  @ApiProperty({ example: 'NewPass123!', description: 'New password (min 8 chars)', minLength: 8 })
+  password: string;
+}

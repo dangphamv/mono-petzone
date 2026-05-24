@@ -26,6 +26,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { FcmModule } from './modules/fcm/fcm.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { MailModule } from './modules/mail/mail.module';
 
 import { SupabaseAuthGuard } from './common/guards/supabase-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -44,6 +45,7 @@ import { SupabaseService } from './modules/supabase/supabase.service';
     ScheduleModule.forRoot(),
     SupabaseModule,
     FcmModule,
+    MailModule,
     HealthModule,
     AuthModule,
     UsersModule,

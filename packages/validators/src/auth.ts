@@ -32,6 +32,11 @@ export const forgotPasswordSchema = z.object({
   redirect_to: z.string().url().optional(),
 })
 
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20, 'Token không hợp lệ'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự').max(72),
+})
+
 export type SendOtpInput = z.infer<typeof sendOtpSchema>
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>
 export type LoginInput = z.infer<typeof loginSchema>
@@ -39,3 +44,4 @@ export type GoogleAuthInput = z.infer<typeof googleAuthSchema>
 export type SelectRoleInput = z.infer<typeof selectRoleSchema>
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>

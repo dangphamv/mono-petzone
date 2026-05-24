@@ -496,6 +496,18 @@ export const en = {
   'login.forgot_sending': 'Sending...',
   'login.forgot_sent': "If an account exists for that email, we've sent a reset link.",
   'login.forgot_back': 'Back to sign in',
+  'reset.title': 'Reset password',
+  'reset.subtitle': 'Enter a new password for your account',
+  'reset.new_password': 'New password',
+  'reset.confirm_password': 'Confirm password',
+  'reset.too_short': 'Password must be at least 8 characters',
+  'reset.mismatch': 'Passwords do not match',
+  'reset.submit': 'Reset password',
+  'reset.submitting': 'Processing...',
+  'reset.success': 'Password reset successfully. You can now sign in with the new password.',
+  'reset.error': 'Could not reset password. Please try again.',
+  'reset.no_token': 'Invalid or missing reset token. Please request a new link from the sign-in page.',
+  'reset.back_to_login': 'Back to sign in',
 
   // DataTable
   'table.showing_results': 'Showing {from}-{to} of {total}',

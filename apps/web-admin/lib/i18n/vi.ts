@@ -496,6 +496,18 @@ export const vi = {
   'login.forgot_sending': 'Đang gửi...',
   'login.forgot_sent': 'Nếu email này có tài khoản, link đặt lại mật khẩu đã được gửi.',
   'login.forgot_back': 'Quay lại đăng nhập',
+  'reset.title': 'Đặt lại mật khẩu',
+  'reset.subtitle': 'Nhập mật khẩu mới cho tài khoản của bạn',
+  'reset.new_password': 'Mật khẩu mới',
+  'reset.confirm_password': 'Xác nhận mật khẩu',
+  'reset.too_short': 'Mật khẩu phải có ít nhất 8 ký tự',
+  'reset.mismatch': 'Mật khẩu xác nhận không khớp',
+  'reset.submit': 'Đặt lại mật khẩu',
+  'reset.submitting': 'Đang xử lý...',
+  'reset.success': 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.',
+  'reset.error': 'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
+  'reset.no_token': 'Liên kết không hợp lệ hoặc thiếu token. Vui lòng yêu cầu lại từ trang đăng nhập.',
+  'reset.back_to_login': 'Về trang đăng nhập',
 
   // DataTable
   'table.showing_results': 'Hiển thị {from}-{to} / {total}',

@@ -33,6 +33,7 @@
     "@petzone/shared": "workspace:*",
     "@petzone/supabase": "workspace:*",
     "@petzone/validators": "workspace:*",
+    "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.49.0",
     "cache-manager": "^7.2.8",
     "compression": "^1.8.1",

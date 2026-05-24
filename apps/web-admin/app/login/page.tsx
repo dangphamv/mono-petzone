@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
   const handleForgotSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!forgotEmail) return
-    const redirect = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined
+    const redirect = typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
     forgot.mutate({ email: forgotEmail, redirect_to: redirect })
   }
 

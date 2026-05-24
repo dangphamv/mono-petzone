@@ -43,3 +43,13 @@ export function useForgotPassword() {
       }),
   })
 }
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (body: { token: string; password: string }) =>
+      api<{ data: { success: boolean } }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  })
+}

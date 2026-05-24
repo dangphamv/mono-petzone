@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  if (pathname === '/login') return NextResponse.next()
+  if (pathname === '/login' || pathname === '/reset-password') return NextResponse.next()
 
   const accessToken = request.cookies.get('access_token')?.value
 
@@ -14,5 +14,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!login|reset-password|_next/static|_next/image|favicon.ico).*)'],
 }
